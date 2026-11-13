@@ -6,6 +6,7 @@ import { stats } from '@social-grid/core/project/project.ts'
 import { ChevronLeft, ChevronRight, Clock, Plus, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useLocation } from 'wouter'
+import { PostMenu } from '../components/menu.tsx'
 import { PostIcon, useName } from '../components/project.tsx'
 import { Desk, useMobile } from '../components/shell.tsx'
 import { color, NetIcon, Seg, St } from '../components/ui.tsx'
@@ -148,9 +149,11 @@ function Day({ d, now, hm, posts, gaps, open: openPost }: { d: string; now: stri
           <span className={`absolute top-1/2 left-1/2 -mt-[31px] -ml-[31px] size-[62px] rounded-full ${isToday ? 'shadow-[0_0_0_2px_var(--color-primary)]' : 'bg-surface-3'}`} />
           <div className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2">
             {shown.map((p, i) => (
-              <button key={p.id} title={p.title} onClick={() => openPost(p)} className={i ? '-ml-3.5 mt-[22px]' : ''}>
-                <PostIcon post={p} dot rot={spin(p.id)} />
-              </button>
+              <PostMenu key={p.id} post={p}>
+                <button title={p.title} onClick={() => openPost(p)} className={i ? '-ml-3.5 mt-[22px]' : ''}>
+                  <PostIcon post={p} dot rot={spin(p.id)} />
+                </button>
+              </PostMenu>
             ))}
           </div>
           {posts.length > 2 && <span className="absolute right-[18%] bottom-[8%] text-[11px] font-extrabold text-text-muted">+{posts.length - 2}</span>}
@@ -201,20 +204,22 @@ function Today() {
       </div>
       {first ? <Next p={first} now={now} /> : <p className="mt-4 text-[13.5px] font-semibold text-text-muted">{todays.length ? 'Tudo de hoje já foi postado.' : 'Nada marcado pra hoje.'}</p>}
       {rest.map((p) => (
-        <Link key={p.id} href={`/post/${p.id}`} className="flex items-center gap-3 px-1 pt-3">
-          <PostIcon post={p} size={36} sm />
-          <div className="min-w-0 flex-1">
-            <b className="block truncate text-sm">{p.title}</b>
-            <small className="block truncate text-[12.5px] font-semibold text-text-muted">
-              <ProjectName id={p.project} /> · {kind(p)}
-            </small>
-          </div>
-          <div className="text-right">
-            <span className="hr">{p.time ?? ''}</span>
-            <br />
-            <St status={p.status} className="mt-1" />
-          </div>
-        </Link>
+        <PostMenu key={p.id} post={p}>
+          <Link href={`/post/${p.id}`} className="flex items-center gap-3 px-1 pt-3">
+            <PostIcon post={p} size={36} sm />
+            <div className="min-w-0 flex-1">
+              <b className="block truncate text-sm">{p.title}</b>
+              <small className="block truncate text-[12.5px] font-semibold text-text-muted">
+                <ProjectName id={p.project} /> · {kind(p)}
+              </small>
+            </div>
+            <div className="text-right">
+              <span className="hr">{p.time ?? ''}</span>
+              <br />
+              <St status={p.status} className="mt-1" />
+            </div>
+          </Link>
+        </PostMenu>
       ))}
     </section>
   )
@@ -228,30 +233,32 @@ function Next({ p, now }: { p: Post; now: Date }) {
   const left = until(p, now)
   const overdue = late(p, now)
   return (
-    <Link href={`/post/${p.id}`} className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-surface-2 p-4 hover:border-border-strong">
-      <div className="flex items-center gap-3">
-        <PostIcon post={p} />
-        <div className="min-w-0 flex-1">
-          <b className="block truncate text-[14.5px]">{p.title}</b>
-          <small className="text-[12.5px] font-semibold text-text-muted">{kind(p)}</small>
+    <PostMenu post={p}>
+      <Link href={`/post/${p.id}`} className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-surface-2 p-4 hover:border-border-strong">
+        <div className="flex items-center gap-3">
+          <PostIcon post={p} />
+          <div className="min-w-0 flex-1">
+            <b className="block truncate text-[14.5px]">{p.title}</b>
+            <small className="text-[12.5px] font-semibold text-text-muted">{kind(p)}</small>
+          </div>
+          <span className="hr">{p.time ?? ''}</span>
         </div>
-        <span className="hr">{p.time ?? ''}</span>
-      </div>
-      <div className="flex items-center gap-3">
-        <St status={p.status} />
-        {overdue && (
-          <span className="st late">
-            <span>Atrasado</span>
-          </span>
-        )}
-        {left && (
-          <span className={`ml-auto flex items-center gap-2 text-[12.5px] font-bold ${p.status === 'ready' ? 'text-ready' : 'text-draft'}`}>
-            <Clock size={14} />
-            {left}
-          </span>
-        )}
-      </div>
-    </Link>
+        <div className="flex items-center gap-3">
+          <St status={p.status} />
+          {overdue && (
+            <span className="st late">
+              <span>Atrasado</span>
+            </span>
+          )}
+          {left && (
+            <span className={`ml-auto flex items-center gap-2 text-[12.5px] font-bold ${p.status === 'ready' ? 'text-ready' : 'text-draft'}`}>
+              <Clock size={14} />
+              {left}
+            </span>
+          )}
+        </div>
+      </Link>
+    </PostMenu>
   )
 }
 

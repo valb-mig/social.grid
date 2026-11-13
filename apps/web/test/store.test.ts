@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Ev, Item, Log } from '@social-grid/core/chat.ts'
+import { make } from '@social-grid/core/post/post.ts'
 
 const asked: string[] = []
 let server: { epoch: string; events: Item[]; state: Log['state'] } = { epoch: 'a1', events: [], state: 'idle' }
 
 globalThis.fetch = (async (url: string) => {
   asked.push(url)
+  if (url.startsWith('/api/posts/')) return new Response(JSON.stringify({ error: 'not_found' }), { status: 404 })
   const q = new URL(url, 'http://pc').searchParams
   const after = Number(q.get('after') ?? 0)
   const same = q.get('epoch') === server.epoch
@@ -14,7 +16,7 @@ globalThis.fetch = (async (url: string) => {
   return new Response(JSON.stringify({ state: server.state, epoch: server.epoch, events }), { status: 200 })
 }) as typeof fetch
 
-const { useStore } = await import('../src/lib/store.ts')
+const { list, useStore } = await import('../src/lib/store.ts')
 
 const items = (...evs: Ev[]): Item[] => evs.map((ev, i) => ({ seq: i + 1, ev }))
 const settle = () => new Promise((r) => setTimeout(r, 20))
@@ -61,4 +63,21 @@ test('servidor reiniciou e a conversa reabriu com seq menor: o epoch novo recarr
 test('post criado pelo chat acende o brilho na agenda mesmo sem a conversa aberta', () => {
   useStore.getState().event('c3', 'z9', 7, { k: 'post', id: 'carrossel-do-mocha-a1b2' })
   assert.ok(useStore.getState().fresh['carrossel-do-mocha-a1b2'])
+})
+
+test('post excluído no PC some da agenda aberta no celular: gone tira o post na hora, repetido não faz mal', async () => {
+  const post = (id: string, title: string) => ({ ...make({ network: 'instagram', format: 'feed', title, date: '2026-11-16', time: '12:00' }, new Date('2026-11-13T10:00:00')), id })
+  const s = useStore.getState()
+  s.put(post('rascunho-descartado-a1b2', 'Rascunho descartado'))
+  s.put(post('carrossel-do-mocha-c3d4', 'Carrossel do mocha'))
+  s.wire({ t: 'gone', id: 'rascunho-descartado-a1b2' })
+  assert.deepEqual(list(useStore.getState().posts).map((p) => p.id), ['carrossel-do-mocha-c3d4'])
+  const before = useStore.getState().posts
+  s.wire({ t: 'gone', id: 'rascunho-descartado-a1b2' })
+  assert.equal(useStore.getState().posts, before)
+
+  s.wire({ t: 'post', id: 'carrossel-do-mocha-c3d4' })
+  await settle()
+  assert.equal(asked.at(-1), '/api/posts/carrossel-do-mocha-c3d4')
+  assert.deepEqual(useStore.getState().posts, {})
 })

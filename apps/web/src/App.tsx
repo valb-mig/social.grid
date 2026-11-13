@@ -3,6 +3,7 @@ import { Route, Switch, useLocation } from 'wouter'
 import { Tabs, Toast, Top, useMobile } from './components/shell.tsx'
 import { renew } from './lib/push.ts'
 import { useStore } from './lib/store.ts'
+import { mark } from './lib/trail.ts'
 import { connect } from './lib/ws.ts'
 import { Agenda } from './screens/agenda.tsx'
 import { Chat } from './screens/chat.tsx'
@@ -41,6 +42,10 @@ export function App() {
       navigator.serviceWorker?.removeEventListener('message', nav)
     }
   }, [go])
+
+  useEffect(() => {
+    mark(`${loc}${location.search}`)
+  }, [loc])
 
   useEffect(() => {
     if (first.current && mobile && loc === '/') go('/hoje', { replace: true })

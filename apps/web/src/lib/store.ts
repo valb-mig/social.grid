@@ -1,4 +1,4 @@
-import type { Ev, Item, Session, State } from '@social-grid/core/chat.ts'
+import type { Ev, Item, Session, State, Wire } from '@social-grid/core/chat.ts'
 import type { Config } from '@social-grid/core/plan/config.ts'
 import type { Post } from '@social-grid/core/post/post.ts'
 import { create } from 'zustand'
@@ -11,6 +11,7 @@ type S = {
   projects: Row[]
   config: Config | null
   root: string
+  vault: string
   live: boolean
   peers: string[]
   loaded: boolean
@@ -21,6 +22,8 @@ type S = {
   boot(): Promise<void>
   refresh(id: string): Promise<void>
   put(p: Post): void
+  drop(id: string): void
+  wire(m: Wire): void
   loadProjects(): Promise<void>
   loadConfig(): Promise<void>
   setConfig(c: Config): void
@@ -41,6 +44,7 @@ export const useStore = create<S>((set, get) => ({
   projects: [],
   config: null,
   root: '',
+  vault: '~/SocialGrid',
   live: false,
   peers: [],
   loaded: false,
@@ -61,14 +65,27 @@ export const useStore = create<S>((set, get) => ({
       const { post } = await api.post(id)
       get().put(post)
     } catch {
-      const posts = { ...get().posts }
-      delete posts[id]
-      set({ posts })
+      get().drop(id)
     }
   },
 
   put(p) {
     set({ posts: { ...get().posts, [p.id]: p } })
+  },
+
+  drop(id) {
+    if (!(id in get().posts)) return
+    const posts = { ...get().posts }
+    delete posts[id]
+    set({ posts })
+  },
+
+  wire(m) {
+    if (m.t === 'post') void get().refresh(m.id)
+    if (m.t === 'gone') get().drop(m.id)
+    if (m.t === 'config') void get().loadConfig()
+    if (m.t === 'chat') get().event(m.id, m.epoch, m.seq, m.ev)
+    if (m.t === 'peers') set({ peers: m.list })
   },
 
   async loadProjects() {
@@ -77,7 +94,7 @@ export const useStore = create<S>((set, get) => ({
 
   async loadConfig() {
     const s = await api.config()
-    set({ config: s.config, root: s.root })
+    set({ config: s.config, root: s.root, vault: s.vault || get().vault })
   },
 
   setConfig(c) {
@@ -86,7 +103,7 @@ export const useStore = create<S>((set, get) => ({
     saving = setTimeout(async () => {
       try {
         const s = await api.save(c)
-        set({ root: s.root })
+        set({ root: s.root, vault: s.vault || get().vault })
       } catch (e) {
         get().fail(e instanceof Error ? e.message : 'não deu para salvar a config')
         void get().loadConfig()

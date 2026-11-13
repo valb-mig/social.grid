@@ -1,13 +1,17 @@
-import { label as dayLabel } from '@social-grid/core/day.ts'
+import { label as dayLabel, weekday } from '@social-grid/core/day.ts'
 import { kind as mediaKind } from '@social-grid/core/media.ts'
 import { find, get, rules, slot } from '@social-grid/core/network/index.ts'
-import { hook, len, num, type Issue } from '@social-grid/core/network/net.ts'
+import { hook, len, num, type Issue, type Pack } from '@social-grid/core/network/net.ts'
 import { slots } from '@social-grid/core/plan/slots.ts'
 import { bundle, check } from '@social-grid/core/post/ops.ts'
-import { GERAL, line, patch as merge, type Changes, type Post, type Status } from '@social-grid/core/post/post.ts'
-import { Archive, ArrowLeft, Calendar, Check, ChevronDown, Clock, Copy, Ellipsis, GripVertical, Hash, Heart, LoaderCircle, MessageCircle, Plus, Send, Share, Smartphone, Sparkles, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { line, patch as merge, type Changes, type Post, type Status } from '@social-grid/core/post/post.ts'
+import { Archive, ArrowLeft, Calendar, Check, ChevronDown, Clock, Copy, Ellipsis, GripVertical, Hash, Heart, LoaderCircle, MessageCircle, Plus, Send, Share, Smartphone, Sparkles, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'wouter'
+import { Cal, type Mark } from '../components/cal.tsx'
+import { GONE, Trash } from '../components/confirm.tsx'
+import { Hour } from '../components/hour.tsx'
+import { Pick } from '../components/pick.tsx'
 import { ProjectIcon, useName } from '../components/project.tsx'
 import { useMobile } from '../components/shell.tsx'
 import { color, NetIcon, St, statusName } from '../components/ui.tsx'
@@ -15,6 +19,7 @@ import { api, ApiError } from '../lib/api.ts'
 import { ask } from '../lib/novo.ts'
 import { copy, share, useMedia } from '../lib/share.ts'
 import { list, useStore } from '../lib/store.ts'
+import { back } from '../lib/trail.ts'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm'
 
@@ -25,6 +30,7 @@ type Edit = {
   change(c: Changes, now?: boolean): void
   move(to: Status): Promise<void>
   upload(list: FileList | File[]): Promise<void>
+  remove(): Promise<void>
   busy: boolean
 }
 
@@ -32,7 +38,7 @@ const KEYS: (keyof Post)[] = ['project', 'network', 'format', 'type', 'status', 
 
 const same = (a: Post, b: Post) => KEYS.every((k) => a[k] === b[k]) && a.hashtags.join('\n') === b.hashtags.join('\n') && a.media.join('\n') === b.media.join('\n')
 
-function useEdit(id: string): Edit | null {
+function useEdit(id: string): Edit | 'gone' | null {
   const fail = useStore((s) => s.fail)
   const note = useStore((s) => s.note)
   const put = useStore((s) => s.put)
@@ -45,9 +51,22 @@ function useEdit(id: string): Edit | null {
   const flying = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const chain = useRef<Promise<unknown>>(Promise.resolve())
+  const dead = useRef(false)
+  const [gone, setGone] = useState(false)
 
   useEffect(() => {
-    if (!stored) void api.post(id).then((r) => put(r.post), () => fail('post não encontrado'))
+    if (stored || dead.current) return
+    void api.post(id).then(
+      (r) => put(r.post),
+      (e) => {
+        if (dead.current) return
+        if (!(e instanceof ApiError) || e.status !== 404) return fail('não deu para abrir o post')
+        dead.current = true
+        clearTimeout(timer.current)
+        pending.current = {}
+        setGone(true)
+      },
+    )
   }, [id, stored, put, fail])
 
   useEffect(() => {
@@ -59,7 +78,7 @@ function useEdit(id: string): Edit | null {
   const flush = () => {
     clearTimeout(timer.current)
     const c = pending.current
-    if (!Object.keys(c).length) return
+    if (dead.current || !Object.keys(c).length) return
     pending.current = {}
     setSaved('saving')
     flying.current++
@@ -88,6 +107,7 @@ function useEdit(id: string): Edit | null {
 
   useEffect(() => () => flush(), [])
 
+  if (gone) return 'gone'
   if (!local) return null
   const issues = check(local)
   return {
@@ -132,6 +152,18 @@ function useEdit(id: string): Edit | null {
         setBusy(false)
       }
     },
+    async remove() {
+      clearTimeout(timer.current)
+      pending.current = {}
+      await chain.current
+      dead.current = true
+      try {
+        await api.remove(id)
+      } catch (e) {
+        dead.current = false
+        throw e
+      }
+    },
   }
 }
 
@@ -144,6 +176,7 @@ function One({ id }: { id: string }) {
   const mobile = useMobile()
   const e = useEdit(id)
   const [steps, setSteps] = useState<boolean | null>(null)
+  if (e === 'gone') return <Gone />
   if (!e) return <div className="p-8 text-text-muted">Carregando…</div>
   const showSteps = steps ?? (e.post.status !== 'draft')
   if (mobile) return showSteps ? <Steps e={e} edit={() => setSteps(false)} /> : <MobileEditor e={e} steps={() => setSteps(true)} />
@@ -153,6 +186,50 @@ function One({ id }: { id: string }) {
       <Settings e={e} />
       <Preview post={e.post} />
     </div>
+  )
+}
+
+function Gone() {
+  const vault = useStore((s) => s.vault)
+  return (
+    <div className="grid h-full place-items-center p-8">
+      <div className="card flex max-w-[420px] flex-col items-center gap-3 p-8 text-center">
+        <Trash2 size={22} className="text-text-faint" />
+        <b className="text-[17px]">Este post não está mais aqui</b>
+        <p className="text-[13.5px] font-semibold text-text-muted">Foi excluído ou nunca existiu. Post excluído fica em {vault}/.lixeira.</p>
+        <Link className="pill white mt-2" href="/">
+          Voltar pra agenda
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function Remove({ e }: { e: Edit }) {
+  const [, go] = useLocation()
+  const drop = useStore((s) => s.drop)
+  const note = useStore((s) => s.note)
+  const fail = useStore((s) => s.fail)
+  const id = e.post.id
+  const run = async () => {
+    try {
+      await e.remove()
+    } catch (err) {
+      fail(err instanceof Error ? err.message : 'não deu para excluir o post')
+      return false
+    }
+    go(back((l) => l.startsWith(`/post/${id}`)), { replace: true })
+    drop(id)
+    note(GONE)
+    return true
+  }
+  return (
+    <Trash run={run}>
+      <button type="button" className="flex items-center gap-2 text-[12.5px] font-bold text-danger/75 hover:text-danger">
+        <Trash2 size={14} />
+        Excluir post
+      </button>
+    </Trash>
   )
 }
 
@@ -438,20 +515,37 @@ function Field({ title, children }: { title: string; children: ReactNode }) {
 
 function Settings({ e, flat = false }: { e: Edit; flat?: boolean }) {
   const p = e.post
-  const projects = useStore((s) => s.projects)
   const config = useStore((s) => s.config)
   const posts = useStore((s) => s.posts)
   const name = useName(p.project)
   const net = get(p.network)
+  const kind = slot(p.network, p.format)
+  const kname = (net.formats.find((f) => f.id === kind)?.name ?? kind).toLowerCase()
+  const others = useMemo(() => list(posts).filter((x) => x.id !== p.id), [posts, p.id])
   const hint = useMemo(() => {
     if (!p.date) return 'Sem data: fica na lista "sem data" do projeto'
     if (!p.time) return 'Sem hora: escolha um horário'
     if (!config) return ''
-    const others = list(posts).filter((x) => x.id !== p.id)
-    const hit = slots(config, p.date, p.date, others).find((s) => s.net === p.network && s.format === slot(p.network, p.format) && s.time === p.time)
+    const hit = slots(config, p.date, p.date, others).find((s) => s.net === p.network && s.format === kind && s.time === p.time)
     if (hit?.post) return 'Já tem outro post neste slot'
     return hit ? `Ocupa o slot de ${hit.format} das ${hit.time}` : 'Fora dos horários da config'
-  }, [p, config, posts])
+  }, [p, config, others, kind])
+  const marks = useCallback(
+    (from: string, to: string) => {
+      const out: Record<string, Mark[]> = {}
+      if (!config) return out
+      for (const s of slots(config, from, to, others)) if (s.net === p.network && s.format === kind) (out[s.date] ??= []).push({ color: color(s.net), full: !!s.post })
+      return out
+    },
+    [config, others, p.network, kind],
+  )
+  const times = useMemo(() => {
+    if (!config?.nets[p.network]?.on) return []
+    const rs = config.rules.filter((r) => r.on && r.net === p.network && r.format === kind && r.times.length)
+    const day = p.date ? weekday(p.date) : null
+    const that = day === null ? [] : rs.filter((r) => r.days.includes(day))
+    return (that.length ? that : rs).flatMap((r) => r.times)
+  }, [config, p.network, p.date, kind])
   const order: Status[] = ['draft', 'ready', 'posted']
   const at = order.indexOf(p.status)
   return (
@@ -482,53 +576,30 @@ function Settings({ e, flat = false }: { e: Edit; flat?: boolean }) {
       </Field>
       <Field title="Quando">
         <div className="grid grid-cols-[1fr_110px] gap-2">
-          <label className="fd cursor-pointer">
-            <Calendar size={16} />
-            <span className="truncate">{p.date ? dayLabel(p.date) : 'sem data'}</span>
-            {p.date && (
-              <button className="relative z-10 ml-auto text-text-faint hover:text-text" aria-label="Tirar a data" onClick={(ev) => {
-                  ev.preventDefault()
-                  e.change({ date: null }, true)
-                }}>
-                <X size={14} />
-              </button>
-            )}
-            <input
-              type="date"
-              className="absolute inset-0 cursor-pointer opacity-0"
-              value={p.date ?? ''}
-              onClick={(ev) => ev.currentTarget.showPicker?.()}
-              onChange={(ev) => e.change({ date: ev.target.value || null }, true)}
-            />
-          </label>
-          <label className="fd cursor-pointer font-mono">
-            <Clock size={16} />
-            {p.time ?? '--:--'}
-            <input
-              type="time"
-              className="absolute inset-0 cursor-pointer opacity-0"
-              value={p.time ?? ''}
-              onClick={(ev) => ev.currentTarget.showPicker?.()}
-              onChange={(ev) => e.change({ time: ev.target.value || null }, true)}
-            />
-          </label>
+          <Cal value={p.date} set={(d) => e.change({ date: d }, true)} marks={marks} legend={`slot de ${kname}`} title="Data do post">
+            <button type="button" className="fd w-full cursor-pointer text-left hover:border-border-strong" aria-label={`Data: ${p.date ? dayLabel(p.date) : 'sem data'}`}>
+              <Calendar size={16} />
+              <span className={`truncate ${p.date ? '' : 'text-text-muted'}`}>{p.date ? dayLabel(p.date) : 'sem data'}</span>
+              <ChevronDown size={14} className="ml-auto" />
+            </button>
+          </Cal>
+          <Hour value={p.time} set={(t) => e.change({ time: t }, true)} marks={times} color={color(p.network)} mark={`Slots de ${kname}`} clear title="Hora do post">
+            <button type="button" className="fd w-full cursor-pointer font-mono hover:border-border-strong" aria-label={`Hora: ${p.time ?? 'sem hora'}`}>
+              <Clock size={16} />
+              <span className={p.time ? '' : 'text-text-muted'}>{p.time ?? '--:--'}</span>
+            </button>
+          </Hour>
         </div>
         <div className="mt-1.5 text-xs font-semibold text-text-faint">{hint}</div>
       </Field>
       <Field title="Projeto">
-        <label className="fd cursor-pointer">
-          <ProjectIcon id={p.project} size={24} radius={7} className="!shadow-none" />
-          <span className="truncate">{name}</span>
-          <ChevronDown size={16} className="ml-auto" />
-          <select className="absolute inset-0 cursor-pointer opacity-0" value={p.project} onChange={(ev) => e.change({ project: ev.target.value }, true)}>
-            {!projects.some((x) => x.id === p.project) && <option value={p.project}>{p.project}</option>}
-            {projects.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.id === GERAL ? 'geral (sem projeto)' : x.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Pick value={p.project} set={(id) => e.change({ project: id }, true)} geral title="Projeto do post">
+          <button type="button" className="fd w-full cursor-pointer text-left hover:border-border-strong" aria-label={`Projeto: ${name}`}>
+            <ProjectIcon id={p.project} size={24} radius={7} className="!shadow-none" />
+            <span className="truncate">{name}</span>
+            <ChevronDown size={16} className="ml-auto" />
+          </button>
+        </Pick>
       </Field>
       <Field title="Status">
         <div className="flex items-center gap-1.5">
@@ -554,12 +625,20 @@ function Settings({ e, flat = false }: { e: Edit; flat?: boolean }) {
       <Field title="Validação">
         <Checks issues={e.issues} />
       </Field>
-      {!flat && (
-        <button className="mt-auto flex items-center gap-2 self-start text-[12.5px] font-bold text-text-faint hover:text-text-muted" onClick={() => e.change({ archived: !p.archived }, true)}>
-          <Archive size={14} />
-          {p.archived ? 'Desarquivar' : 'Arquivar post'}
-        </button>
-      )}
+      <div className={`flex flex-wrap items-center gap-x-5 gap-y-3 ${flat ? 'border-t border-border pt-5' : 'mt-auto'}`}>
+        {(p.status === 'posted' || p.archived) && (
+          <button
+            type="button"
+            className="flex items-center gap-2 text-[12.5px] font-bold text-text-faint hover:text-text-muted"
+            title={p.archived ? undefined : 'Tira da agenda e guarda o histórico'}
+            onClick={() => e.change({ archived: !p.archived }, true)}
+          >
+            <Archive size={14} />
+            {p.archived ? 'Desarquivar' : 'Arquivar post'}
+          </button>
+        )}
+        <Remove e={e} />
+      </div>
     </aside>
   )
 }
@@ -711,6 +790,65 @@ function MobileEditor({ e, steps }: { e: Edit; steps: () => void }) {
   )
 }
 
+function Slides({ post }: { post: Post }) {
+  const [at, setAt] = useState(0)
+  const n = post.media.length
+  const box = post.network === 'instagram' && (post.format === 'feed' || post.format === 'carrossel') ? 'aspect-[4/5]' : 'aspect-square'
+  if (!n) return <div className={`grid ${box} place-items-center rounded-xl bg-surface-3 text-sm font-bold text-text-faint`}>sem mídia</div>
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className={`relative ${box} overflow-hidden rounded-xl bg-surface-3`}>
+        <div
+          className="flex size-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-none"
+          onScroll={(ev) => {
+            const el = ev.currentTarget
+            setAt(Math.round(el.scrollLeft / el.clientWidth))
+          }}
+        >
+          {post.media.map((m) => (
+            <div key={m} className="size-full flex-none snap-center">
+              <Thumb post={post} name={m} />
+            </div>
+          ))}
+        </div>
+        {n > 1 && (
+          <span className="absolute top-2.5 right-2.5 grid h-6 place-items-center rounded-full bg-black/55 px-2.5 text-[11.5px] font-extrabold">
+            {at + 1}/{n}
+          </span>
+        )}
+      </div>
+      {n > 1 && (
+        <span className="flex justify-center gap-1.5">
+          {post.media.map((m, i) => (
+            <i key={m} className="size-1.5 rounded-full" style={{ background: i === at ? 'var(--color-text)' : 'var(--color-text-faint)' }} />
+          ))}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function Text({ pk }: { pk: Pack }) {
+  const [open, setOpen] = useState(false)
+  const long = pk.caption.split('\n').length > 4 || pk.caption.length > 240
+  return (
+    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-surface p-3.5">
+      <p className={`text-[13.5px] leading-[1.5] whitespace-pre-line ${open ? '' : 'line-clamp-4'}`}>{pk.caption || <span className="text-text-faint">sem legenda</span>}</p>
+      {long && (
+        <button className="self-start text-xs font-extrabold text-text-muted" onClick={() => setOpen(!open)}>
+          {open ? 'ver menos' : 'ver legenda inteira'}
+        </button>
+      )}
+      {pk.tags && <p className="text-[12.5px] leading-[1.5] font-bold break-words text-text-muted">{pk.tags}</p>}
+      {pk.comment && (
+        <p className="border-t border-border pt-2.5 text-[12.5px] leading-[1.5] break-words text-text-muted">
+          <b className="text-text">Comentário:</b> {pk.comment}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function Steps({ e, edit }: { e: Edit; edit: () => void }) {
   const p = e.post
   const pk = bundle(p)
@@ -766,10 +904,8 @@ function Steps({ e, edit }: { e: Edit; edit: () => void }) {
           Editar
         </button>
       </div>
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-surface-3">
-        {p.media[0] ? <Thumb post={p} name={p.media[0]} className="object-top" /> : <div className="grid size-full place-items-center text-sm font-bold text-text-faint">sem mídia</div>}
-        {p.media.length > 1 && <span className="absolute top-2.5 right-2.5 grid h-6 place-items-center rounded-full bg-black/55 px-2.5 text-[11.5px] font-extrabold">1/{p.media.length}</span>}
-      </div>
+      <Slides post={p} />
+      <Text pk={pk} />
       <div className="flex flex-col gap-2">
         {items.map(([k, name, act, run], i) => {
           const ok = done.includes(k)
@@ -797,10 +933,15 @@ function Steps({ e, edit }: { e: Edit; edit: () => void }) {
           Postado. Desfazer
         </button>
       ) : p.status === 'ready' ? (
-        <button className="btn okf" onClick={() => void e.move('posted')}>
-          <Check size={18} />
-          Postei, marcar como postado
-        </button>
+        <>
+          <button className="btn okf" onClick={() => void e.move('posted')}>
+            <Check size={18} />
+            Postei, marcar como postado
+          </button>
+          <button className="btn g" onClick={() => void e.move('draft')}>
+            Algo errado? Voltar pra rascunho
+          </button>
+        </>
       ) : (
         <button className="btn ok" onClick={() => void e.move('ready')}>
           <Check size={18} />

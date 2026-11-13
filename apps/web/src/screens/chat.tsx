@@ -8,6 +8,7 @@ import { ArrowUp, BookOpen, Check, ChevronDown, Folder, History, Image as Pictur
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams, useSearch } from 'wouter'
 import { Md } from '../components/md.tsx'
+import { Pick } from '../components/pick.tsx'
 import { ProjectIcon, useName } from '../components/project.tsx'
 import { Desk, useMobile } from '../components/shell.tsx'
 import { color } from '../components/ui.tsx'
@@ -76,7 +77,6 @@ function Panel({ full = false }: { full?: boolean }) {
   const [upping, setUpping] = useState(0)
   const box = useRef<HTMLDivElement>(null)
   const pick = useRef<HTMLInputElement>(null)
-  const projects = useStore((s) => s.projects)
   const pname = useName(session?.project ?? project)
 
   useEffect(() => {
@@ -143,25 +143,25 @@ function Panel({ full = false }: { full?: boolean }) {
           <Sparkles size={18} className="text-ai" />
           Chat
         </h2>
-        <label className="relative inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border bg-surface-2 pr-3 pl-[5px] text-[12.5px] font-bold">
-          <ProjectIcon id={cur} size={22} radius={7} className="!shadow-none" />
-          <span className="max-w-[120px] truncate">{pname}</span>
-          <ChevronDown size={14} />
-          <select
-            className="absolute inset-0 cursor-pointer opacity-0"
-            value={cur}
-            onChange={(e) => {
-              setProject(e.target.value)
-              if (id) go(`/chat?projeto=${encodeURIComponent(e.target.value)}`)
-            }}
+        <Pick
+          value={cur}
+          geral
+          title="Projeto da conversa"
+          set={(p) => {
+            setProject(p)
+            if (id) go(`/chat?projeto=${encodeURIComponent(p)}`)
+          }}
+        >
+          <button
+            type="button"
+            className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-full border border-border bg-surface-2 pr-2.5 pl-[5px] text-[12.5px] font-bold hover:border-border-strong data-[state=open]:border-border-strong"
+            aria-label={`Projeto: ${pname}`}
           >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            <ProjectIcon id={cur} size={22} radius={7} className="!shadow-none" />
+            <span className="max-w-[120px] truncate">{pname}</span>
+            <ChevronDown size={14} className="text-text-faint" />
+          </button>
+        </Pick>
         <Link href="/config/skills" className="inline-flex h-8 items-center rounded-full border border-border bg-surface-2 px-3 text-[12.5px] font-bold text-text-muted">
           {model(config?.model)}
         </Link>

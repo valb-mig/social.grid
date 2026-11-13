@@ -30,11 +30,7 @@ export function connect(): () => void {
       } catch {
         return
       }
-      const s = useStore.getState()
-      if (m.t === 'post') void s.refresh(m.id)
-      if (m.t === 'config') void s.loadConfig()
-      if (m.t === 'chat') s.event(m.id, m.epoch, m.seq, m.ev)
-      if (m.t === 'peers') useStore.setState({ peers: m.list })
+      useStore.getState().wire(m)
     }
     sock.onclose = () => {
       clearInterval(beat)

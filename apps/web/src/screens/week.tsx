@@ -4,6 +4,7 @@ import type { Post } from '@social-grid/core/post/post.ts'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo } from 'react'
 import { useLocation } from 'wouter'
+import { PostMenu } from '../components/menu.tsx'
 import { ProjectIcon } from '../components/project.tsx'
 import { color, Seg, St } from '../components/ui.tsx'
 import { novo } from '../lib/novo.ts'
@@ -98,27 +99,29 @@ export function Week({ nets, alone = false }: { nets?: Set<string>; alone?: bool
 function Item({ p, glow }: { p: Post; glow: boolean }) {
   const [, go] = useLocation()
   return (
-    <button
-      className="wk relative flex min-w-0 flex-none flex-col gap-2 rounded-lg border bg-surface-2 p-2.5 text-left"
-      style={{
-        borderColor: glow ? color(p.network) : 'var(--color-border)',
-        boxShadow: glow ? `0 0 0 4px color-mix(in srgb, ${color(p.network)} 18%, transparent)` : undefined,
-        opacity: p.status === 'posted' ? 0.6 : 1,
-      }}
-      onClick={() => go(`/post/${p.id}`)}
-    >
-      {glow && (
-        <span className="absolute -top-2.5 right-2.5 grid h-5 place-items-center rounded-full px-2 text-[10.5px] font-extrabold text-on-accent" style={{ background: color(p.network) }}>
-          agora
+    <PostMenu post={p}>
+      <button
+        className="wk relative flex min-w-0 flex-none flex-col gap-2 rounded-lg border bg-surface-2 p-2.5 text-left"
+        style={{
+          borderColor: glow ? color(p.network) : 'var(--color-border)',
+          boxShadow: glow ? `0 0 0 4px color-mix(in srgb, ${color(p.network)} 18%, transparent)` : undefined,
+          opacity: p.status === 'posted' ? 0.6 : 1,
+        }}
+        onClick={() => go(`/post/${p.id}`)}
+      >
+        {glow && (
+          <span className="absolute -top-2.5 right-2.5 grid h-5 place-items-center rounded-full px-2 text-[10.5px] font-extrabold text-on-accent" style={{ background: color(p.network) }}>
+            agora
+          </span>
+        )}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <ProjectIcon id={p.project} size={26} radius={8} />
+          <span className="dot" style={{ background: color(p.network) }} />
+          <span className="hr ml-auto text-xs">{p.time ?? ''}</span>
         </span>
-      )}
-      <span className="flex min-w-0 items-center gap-1.5">
-        <ProjectIcon id={p.project} size={26} radius={8} />
-        <span className="dot" style={{ background: color(p.network) }} />
-        <span className="hr ml-auto text-xs">{p.time ?? ''}</span>
-      </span>
-      <b className="text-[13px] leading-[1.3]">{p.title}</b>
-      <St status={p.status} className="sm self-start" />
-    </button>
+        <b className="text-[13px] leading-[1.3]">{p.title}</b>
+        <St status={p.status} className="sm self-start" />
+      </button>
+    </PostMenu>
   )
 }

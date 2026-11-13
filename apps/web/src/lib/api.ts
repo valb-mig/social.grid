@@ -7,7 +7,7 @@ import type { Project, Stats } from '@social-grid/core/project/project.ts'
 
 export type Full = { post: Post; issues: Issue[]; pack: Pack; grew?: boolean }
 export type Row = Project & { stats: Stats }
-export type Settings = { config: Config; root: string }
+export type Settings = { config: Config; root: string; vault: string }
 export type Entry = { kind: 'skill' | 'agent'; name: string; about: string; files: string[]; missing: boolean }
 export type Doc = { kind: 'skill' | 'agent'; name: string; file: string; path: string; front: string; body: string }
 
@@ -41,6 +41,7 @@ export const api = {
   create: (i: Input) => call<Full>('POST', '/api/posts', i),
   patch: (id: string, c: Changes, base?: string) => call<Full>('PATCH', `/api/posts/${enc(id)}`, { ...c, ...(base ? { base } : {}) }),
   move: (id: string, to: Status) => call<Full>('POST', `/api/posts/${enc(id)}/status`, { to }),
+  remove: (id: string) => call<{ ok: true }>('DELETE', `/api/posts/${enc(id)}`, {}),
   async upload(id: string, file: File): Promise<Full> {
     const form = new FormData()
     form.append('file', file)

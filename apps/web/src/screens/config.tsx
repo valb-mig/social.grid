@@ -1,10 +1,13 @@
 import { nets, rules } from '@social-grid/core/network/index.ts'
 import { total, weekly, type Config, type Rule } from '@social-grid/core/plan/config.ts'
 import { tags as clean } from '@social-grid/core/post/post.ts'
-import { Bell, BookOpen, Calendar, Check, Clock, FileText, Hash, Share, Smartphone, Sparkles, X } from 'lucide-react'
+import { Bell, BookOpen, Calendar, Check, ChevronDown, Clock, FileText, Hash, Plus, Share, Smartphone, Sparkles, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'wouter'
+import { Combo, type Choice } from '../components/combo.tsx'
+import { Hour } from '../components/hour.tsx'
 import { Md } from '../components/md.tsx'
+import { Pick } from '../components/pick.tsx'
 import { useMobile } from '../components/shell.tsx'
 import { color, NetIcon, Toggle } from '../components/ui.tsx'
 import { api, type Doc, type Entry } from '../lib/api.ts'
@@ -13,6 +16,11 @@ import { useStore } from '../lib/store.ts'
 import { model } from './chat.tsx'
 
 const DAYS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
+const MODEL = /^[A-Za-z0-9.\[\]_:-]{1,80}$/
+const MODELS: Choice[] = [
+  { value: '', label: 'Padrão do Claude Code', sub: 'sem modelo fixo' },
+  ...['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'].map((m) => ({ value: m, label: model(m), sub: m })),
+]
 const TIPS: Record<string, string> = { instagram: 'Skill sugere ter a qui, 12h ou 18h a 21h', linkedin: 'Skill sugere ter a qui, 8h a 10h' }
 
 type Tab = 'redes' | 'frequencia' | 'hashtags' | 'skills' | 'celular'
@@ -184,7 +192,6 @@ function Frequencia() {
 }
 
 function Times({ times, set }: { times: string[]; set: (t: string[]) => void }) {
-  const [adding, setAdding] = useState(false)
   return (
     <div className="flex flex-wrap gap-1.5">
       {times.map((t) => (
@@ -198,21 +205,15 @@ function Times({ times, set }: { times: string[]; set: (t: string[]) => void }) 
           <X size={12} className="hidden text-text-faint group-hover:block pointer-coarse:block" />
         </button>
       ))}
-      {adding ? (
-        <input
-          type="time"
-          autoFocus
-          className="h-[34px] rounded-md border border-border-strong bg-surface-3 px-2 font-mono text-[13px]"
-          onBlur={(e) => {
-            if (e.target.value) set([...times, e.target.value])
-            setAdding(false)
-          }}
-          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        />
-      ) : (
-        <button className="flex h-[34px] items-center rounded-md border border-dashed border-border-strong px-3 text-[12.5px] font-bold text-text-faint hover:text-text-muted" onClick={() => setAdding(true)}>
-          + horário
-        </button>
+      {times.length < 8 && (
+        <Hour value={null} set={(t) => t && !times.includes(t) && set([...times, t])} title="Novo horário">
+          <button
+            type="button"
+            className="flex h-[34px] items-center rounded-md border border-dashed border-border-strong px-3 text-[12.5px] font-bold text-text-faint hover:text-text-muted data-[state=open]:text-text-muted"
+          >
+            + horário
+          </button>
+        </Hour>
       )}
     </div>
   )
@@ -240,7 +241,12 @@ function Alerts() {
           <b className="block text-sm">Rascunho no dia</b>
           <small className="text-[12.5px] font-semibold text-text-muted">
             avisar às{' '}
-            <input type="time" className="rounded-sm bg-surface-3 px-1 font-mono" value={p.at} onChange={(e) => e.target.value && edit((c) => ((c.push.at = e.target.value), c))} />, ou antes se o post for mais cedo
+            <Hour value={p.at} set={(t) => t && edit((c) => ((c.push.at = t), c))} title="Aviso de rascunho">
+              <button type="button" className="rounded-sm bg-surface-3 px-1.5 font-mono text-text hover:bg-border-strong" aria-label={`Hora do aviso: ${p.at}`}>
+                {p.at}
+              </button>
+            </Hour>
+            , ou antes se o post for mais cedo
           </small>
         </div>
         <Toggle on={p.draft} set={(v) => edit((c) => ((c.push.draft = v), c))} label="Avisar rascunho" />
@@ -280,7 +286,6 @@ function Redes() {
   const [config, edit] = useConfig()
   const root = useStore((s) => s.root)
   const [dir, setDir] = useState(config?.root ?? '')
-  const [m, setM] = useState(config?.model ?? '')
   if (!config) return null
   return (
     <Pane title="Redes" sub="Onde você posta. Rede desligada some da agenda e dos slots.">
@@ -311,23 +316,23 @@ function Redes() {
             onBlur={() => edit((x) => ((x.root = dir.trim() || null), x))}
           />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-bold text-text-muted">Modelo do chat (vazio usa o padrão do Claude Code; agora: {model(config.model)})</span>
-          <input
-            className="field font-mono"
-            list="sg-models"
-            placeholder="claude-opus-5-5"
-            value={m}
-            onChange={(e) => setM(e.target.value)}
-            onBlur={() => edit((x) => ((x.model = m.trim() || null), x))}
-          />
-          <datalist id="sg-models">
-            <option value="claude-opus-5-5" />
-            <option value="opus" />
-            <option value="sonnet" />
-            <option value="haiku" />
-          </datalist>
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-bold text-text-muted">Modelo do chat (agora: {model(config.model)})</span>
+          <Combo
+            value={config.model ?? ''}
+            set={(v) => edit((x) => ((x.model = v || null), x))}
+            options={MODELS}
+            title="Modelo do chat"
+            placeholder="buscar ou digitar outro"
+            valid={(v) => MODEL.test(v)}
+            hint="use letras, números e . _ : - [ ]"
+          >
+            <button type="button" className="field flex items-center gap-2 text-left hover:border-border-strong data-[state=open]:border-border-strong" aria-label={`Modelo do chat: ${model(config.model)}`}>
+              <span className={`flex-1 truncate ${config.model ? 'font-mono' : 'text-text-muted'}`}>{config.model ?? 'Padrão do Claude Code'}</span>
+              <ChevronDown size={16} className="flex-none text-text-faint" />
+            </button>
+          </Combo>
+        </div>
       </div>
     </Pane>
   )
@@ -357,7 +362,6 @@ function Chips({ list, set }: { list: string[]; set: (l: string[]) => void }) {
 function Hashtags() {
   const [config, edit] = useConfig()
   const projects = useStore((s) => s.projects)
-  const [pick, setPick] = useState('')
   if (!config) return null
   const custom = Object.keys(config.tags.projects)
   return (
@@ -373,19 +377,12 @@ function Hashtags() {
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-2 px-5 py-4">
         <div className="flex items-center gap-3">
           <b className="text-sm">Por projeto</b>
-          <select className="field ml-auto w-auto" value={pick} onChange={(e) => setPick(e.target.value)}>
-            <option value="">Adicionar projeto…</option>
-            {projects
-              .filter((p) => !custom.includes(p.id))
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-          </select>
-          <button className="pill ghost sm" disabled={!pick} onClick={() => (edit((c) => ((c.tags.projects[pick] = []), c)), setPick(''))}>
-            Adicionar
-          </button>
+          <Pick value="" set={(id) => edit((c) => ((c.tags.projects[id] = c.tags.projects[id] ?? []), c))} skip={custom} geral title="Adicionar projeto">
+            <button type="button" className="pill ghost sm ml-auto data-[state=open]:border-text-faint">
+              <Plus size={14} />
+              Adicionar projeto
+            </button>
+          </Pick>
         </div>
         {custom.map((id) => (
           <div key={id} className="flex flex-col gap-2 border-t border-border pt-3">
