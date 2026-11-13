@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { Wire } from '@social-grid/core/chat.ts'
 import type WebSocket from 'ws'
-import { kit, LOCAL, ORIGIN, TAIL } from './kit.ts'
+import { json, kit, LOCAL, ORIGIN, TAIL } from './kit.ts'
 
 const PHONE = '100.101.102.103'
 
@@ -58,4 +58,25 @@ test('celular sem o login do dono na tailnet não abre o WebSocket', async () =>
   await app.ready()
   await assert.rejects(app.injectWS('/ws', { headers: { host: TAIL, origin: `https://${TAIL}`, 'tailscale-user-login': 'outro@github', 'x-forwarded-for': PHONE } }), /403/)
   await app.close()
+})
+
+test('post excluído no PC some ao vivo no celular: a segunda conexão recebe gone', async () => {
+  const { app } = await kit({ who: async () => 'moto-g24' })
+  await app.ready()
+  const { post } = (await app.inject({ method: 'POST', url: '/api/posts', headers: json, body: JSON.stringify({ network: 'instagram', format: 'feed', title: 'Rascunho' }) })).json()
+  let pc!: ReturnType<typeof inbox>
+  let phone!: ReturnType<typeof inbox>
+  const a = await app.injectWS('/ws', { headers: { host: LOCAL, origin: ORIGIN } }, { onInit: (ws) => (pc = inbox(ws)) })
+  const b = await app.injectWS('/ws', { headers: { host: TAIL, origin: `https://${TAIL}`, 'tailscale-user-login': 'valb@github', 'x-forwarded-for': PHONE } }, { onInit: (ws) => (phone = inbox(ws)) })
+  try {
+    await pc.peers(['moto-g24'])
+    assert.equal((await app.inject({ method: 'DELETE', url: `/api/posts/${post.id}`, headers: json, body: '{}' })).statusCode, 200)
+    for (let i = 0; i < 100 && !phone.got.some((m) => m.t === 'gone'); i++) await new Promise((r) => setTimeout(r, 10))
+    assert.deepEqual(phone.got.filter((m) => m.t === 'gone'), [{ t: 'gone', id: post.id }])
+    assert.deepEqual(pc.got.filter((m) => m.t === 'gone'), [{ t: 'gone', id: post.id }])
+  } finally {
+    a.terminate()
+    b.terminate()
+    await app.close()
+  }
 })

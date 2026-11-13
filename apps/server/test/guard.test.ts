@@ -50,6 +50,22 @@ test('guard no servidor: Host evil.com, POST de outra origem e WebSocket de outr
   assert.equal((await app.inject({ method: 'GET', url: '/ws', headers: ws })).statusCode, 403)
 })
 
+test('DELETE sem Origin, de outra origem ou sem JSON é recusado e o post continua lá', async () => {
+  const { app } = await kit()
+  const { post } = (await app.inject({ method: 'POST', url: '/api/posts', headers: json, body: JSON.stringify({ network: 'instagram', format: 'feed', title: 'x' }) })).json()
+  const url = `/api/posts/${post.id}`
+  assert.equal((await app.inject({ method: 'DELETE', url, headers: { host: LOCAL, 'content-type': 'application/json' }, body: '{}' })).statusCode, 403)
+  assert.equal((await app.inject({ method: 'DELETE', url, headers: { host: LOCAL } })).statusCode, 403)
+  assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...json, origin: 'null' }, body: '{}' })).statusCode, 403)
+  assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...json, origin: 'http://evil.com' }, body: '{}' })).statusCode, 403)
+  assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...json, 'content-type': 'text/plain' }, body: '{}' })).statusCode, 415)
+  const tail = { host: TAIL, origin: `https://${TAIL}`, 'content-type': 'application/json' }
+  assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...tail, 'tailscale-user-login': 'outro@github' }, body: '{}' })).statusCode, 403)
+  assert.equal((await app.inject({ method: 'GET', url, headers: { host: LOCAL } })).statusCode, 200)
+  assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...tail, 'tailscale-user-login': 'valb@github' }, body: '{}' })).statusCode, 200)
+  assert.equal((await app.inject({ method: 'GET', url, headers: { host: LOCAL } })).statusCode, 404)
+})
+
 test('respostas saem com CSP, X-Frame-Options e nosniff', async () => {
   const { app } = await kit()
   const r = await app.inject({ method: 'GET', url: '/api/posts', headers: { host: LOCAL } })

@@ -43,7 +43,7 @@ export async function kit(extra: Partial<Deps> = {}) {
     home,
     ...extra,
   })
-  return { app, v, home, root, base }
+  return { app, v, home, root, base, bus: b }
 }
 
 export const json = { host: LOCAL, origin: ORIGIN, 'content-type': 'application/json' }

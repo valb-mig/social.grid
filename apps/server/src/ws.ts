@@ -60,6 +60,7 @@ const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v
 
 export function socket(app: FastifyInstance, r: Room, bus: Bus, who?: Who) {
   bus.on('post', (e) => r.send({ t: 'post', id: e.id }))
+  bus.on('gone', (e) => r.send({ t: 'gone', id: e.id }))
   bus.on('config', () => r.send({ t: 'config' }))
 
   app.get('/ws', { websocket: true }, (sock, req) => {

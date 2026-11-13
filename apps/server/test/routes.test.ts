@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pics } from '../src/chat/pics.ts'
 import { form, json, kit, LOCAL, ORIGIN, PNG } from './kit.ts'
@@ -23,6 +24,31 @@ test('cria post e lista por intervalo de datas', async () => {
   const one = await app.inject({ method: 'GET', url: `/api/posts/${id}`, headers: { host: LOCAL } })
   assert.equal(one.json().pack.text, 'Legenda')
   assert.ok(one.json().issues.some((i: { code: string }) => i.code === 'media_min'))
+})
+
+test('excluir pela rota move a pasta do post para .lixeira, emite gone e o post some da API', async () => {
+  const { app, v, bus } = await kit()
+  const gone: string[] = []
+  bus.on('gone', (e) => gone.push(e.id))
+  const { post } = (await app.inject({ method: 'POST', url: '/api/posts', headers: json, body: create({ project: 'mocha.app', title: 'Rascunho descartado', date: '2026-11-16', time: '12:00' }) })).json()
+  const up = form('slide.png', 'image/png', PNG)
+  const media = (await app.inject({ method: 'POST', url: `/api/posts/${post.id}/media`, ...up, payload: up.body })).json().name as string
+
+  const del = await app.inject({ method: 'DELETE', url: `/api/posts/${post.id}`, headers: json, body: '{}' })
+  assert.equal(del.statusCode, 200)
+  assert.deepEqual(gone, [post.id])
+  assert.deepEqual(await readdir(v.repo.dir), [])
+  const [moved] = await readdir(join(v.dir, '.lixeira'))
+  assert.ok(moved?.startsWith(`${post.id}-`))
+  assert.deepEqual((await readdir(join(v.dir, '.lixeira', moved))).sort(), [media, 'post.md'].sort())
+
+  assert.equal((await app.inject({ method: 'GET', url: `/api/posts/${post.id}`, headers: { host: LOCAL } })).statusCode, 404)
+  assert.deepEqual((await app.inject({ method: 'GET', url: '/api/posts', headers: { host: LOCAL } })).json(), [])
+  const slots = (await app.inject({ method: 'GET', url: '/api/slots?de=2026-11-16&ate=2026-11-16', headers: { host: LOCAL } })).json()
+  assert.equal(slots.find((s: { time: string }) => s.time === '12:00').post, null)
+  assert.equal((await app.inject({ method: 'DELETE', url: `/api/posts/${post.id}`, headers: json, body: '{}' })).statusCode, 404)
+  assert.equal((await app.inject({ method: 'DELETE', url: '/api/posts/..%2F..%2Fconfig.json', headers: json, body: '{}' })).statusCode, 400)
+  assert.deepEqual(gone, [post.id])
 })
 
 test('PATCH aceita só campos conhecidos e status muda pela rota de status', async () => {

@@ -7,16 +7,19 @@ import { limiter } from './limit.ts'
 
 const span = z.object({ de: z.string().max(10), ate: z.string().max(10) }).strict()
 
+const tilde = (path: string, home: string) => (path === home || path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path)
+
 export function config(app: FastifyInstance, d: Deps) {
   const writes = limiter(60, 60_000)
+  const vault = tilde(d.vault, d.home)
 
-  app.get('/api/config', async () => ({ config: await d.cfg.load(), root: await d.cfg.projects() }))
+  app.get('/api/config', async () => ({ config: await d.cfg.load(), root: await d.cfg.projects(), vault }))
 
   app.put('/api/config', async (req) => {
     writes()
     const cfg = await d.cfg.save(req.body)
     d.bus.emit('config', {})
-    return { config: cfg, root: await d.cfg.projects() }
+    return { config: cfg, root: await d.cfg.projects(), vault }
   })
 
   app.get('/api/slots', async (req) => {

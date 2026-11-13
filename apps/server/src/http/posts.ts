@@ -86,6 +86,11 @@ export function posts(app: FastifyInstance, d: Deps) {
     return full(await d.ops.patch(params.parse(req.params).id, c, base))
   })
 
+  app.delete('/api/posts/:id', async (req) => {
+    await d.ops.remove(params.parse(req.params).id)
+    return { ok: true }
+  })
+
   app.post('/api/posts/:id/status', async (req) => {
     const b = status.parse(req.body)
     return full(await d.ops.move(params.parse(req.params).id, b.to, b.base))
