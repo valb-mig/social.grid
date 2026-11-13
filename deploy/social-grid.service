@@ -1,0 +1,23 @@
+[Unit]
+Description=social.grid, agenda dos posts dos projetos
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=__DIR__/apps/server
+Environment=PATH=__PATH__
+Environment=NODE_ENV=production
+Environment=SOCIAL_GRID_PORT=__PORT__
+Environment=SOCIAL_GRID_SERVE_PORT=__HTTPS__
+ExecStart=__NODE__ src/index.ts
+SyslogIdentifier=social-grid
+Restart=on-failure
+RestartSec=2
+KillMode=mixed
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target
