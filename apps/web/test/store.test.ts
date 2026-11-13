@@ -81,3 +81,19 @@ test('post excluído no PC some da agenda aberta no celular: gone tira o post na
   assert.equal(asked.at(-1), '/api/posts/carrossel-do-mocha-c3d4')
   assert.deepEqual(useStore.getState().posts, {})
 })
+
+test('conversa excluída no PC some do histórico e da tela no celular, e um evento atrasado dela não a ressuscita', async () => {
+  const id = 'c9'
+  server = { epoch: 'a1', state: 'idle', events: items({ k: 'user', text: 'story do edit.r' }, { k: 'text', text: 'rascunho' }) }
+  const at = new Date().toISOString()
+  useStore.setState({ sessions: [{ id, sdk: null, project: 'editr', title: 'story do edit.r', createdAt: at, updatedAt: at, state: 'idle' }, { id: 'c10', sdk: null, project: 'mocha.app', title: 'outra', createdAt: at, updatedAt: at, state: 'closed' }] })
+  await useStore.getState().loadChat(id)
+  assert.ok(useStore.getState().chats[id])
+  useStore.getState().wire({ t: 'unchat', id })
+  assert.equal(useStore.getState().chats[id], undefined)
+  assert.deepEqual(useStore.getState().sessions.map((s) => s.id), ['c10'])
+  useStore.getState().event(id, 'a1', 3, { k: 'state', state: 'closed' })
+  assert.equal(useStore.getState().chats[id], undefined)
+  useStore.getState().wire({ t: 'unchat', id })
+  assert.deepEqual(useStore.getState().sessions.map((s) => s.id), ['c10'])
+})

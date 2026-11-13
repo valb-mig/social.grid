@@ -4,9 +4,11 @@ import { find } from '@social-grid/core/network/index.ts'
 import { errors } from '@social-grid/core/network/net.ts'
 import { check } from '@social-grid/core/post/ops.ts'
 import { GERAL } from '@social-grid/core/post/post.ts'
-import { ArrowUp, BookOpen, Check, ChevronDown, Folder, History, Image as Picture, LoaderCircle, Sparkles, Square as Stop, X } from 'lucide-react'
+import type { Session } from '@social-grid/core/chat.ts'
+import { ArrowUp, BookOpen, Check, ChevronDown, Folder, History, Image as Picture, LoaderCircle, Sparkles, Square as Stop, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useParams, useSearch } from 'wouter'
+import { Confirm } from '../components/confirm.tsx'
 import { Md } from '../components/md.tsx'
 import { Pick } from '../components/pick.tsx'
 import { ProjectIcon, useName } from '../components/project.tsx'
@@ -68,10 +70,14 @@ function Panel({ full = false }: { full?: boolean }) {
   const loadChat = useStore((s) => s.loadChat)
   const loadSessions = useStore((s) => s.loadSessions)
   const fail = useStore((s) => s.fail)
+  const note = useStore((s) => s.note)
+  const forget = useStore((s) => s.forget)
   const session = sessions.find((s) => s.id === id)
   const [project, setProject] = useState(pre.projeto)
   const [text, setText] = useState(pre.text)
   const [hist, setHist] = useState(false)
+  const [del, setDel] = useState<Session | null>(null)
+  const had = useRef<string | null>(null)
   const [sending, setSending] = useState(false)
   const [pics, setPics] = useState<string[]>([])
   const [upping, setUpping] = useState(0)
@@ -97,6 +103,30 @@ function Panel({ full = false }: { full?: boolean }) {
 
   const running = chat?.state === 'running'
   const cur = session?.project ?? project
+
+  useEffect(() => {
+    if (id && chat) had.current = id
+    else if (id && had.current === id && !chat) {
+      had.current = null
+      note('Esta conversa foi excluída')
+      go(`/chat?projeto=${encodeURIComponent(cur)}`, { replace: true })
+    }
+  }, [id, chat, cur, go, note])
+
+  const wipe = async () => {
+    if (!del) return false
+    try {
+      await api.unchat(del.id)
+      if (del.id === id) had.current = null
+      forget(del.id)
+      note('Conversa excluída')
+      if (del.id === id) go(`/chat?projeto=${encodeURIComponent(del.project)}`, { replace: true })
+      return true
+    } catch (e) {
+      fail(e instanceof Error ? e.message : 'não deu para excluir a conversa')
+      return false
+    }
+  }
 
   const attach = async (list: File[]) => {
     const imgs = list.filter((f) => /^image\/(jpeg|png|webp|gif)$/.test(f.type)).slice(0, MAX_PICS - pics.length)
@@ -168,6 +198,15 @@ function Panel({ full = false }: { full?: boolean }) {
         <button className="grid size-8 place-items-center rounded-full text-text-muted hover:text-text" aria-label="Conversas" onClick={() => setHist(!hist)}>
           <History size={16} />
         </button>
+        <Confirm
+          title="Excluir esta conversa?"
+          text="Ela some daqui e do histórico do Claude Code. Os posts criados nela continuam na agenda. Não dá pra desfazer."
+          ok="Excluir conversa"
+          busy="Excluindo…"
+          run={wipe}
+          open={del !== null}
+          set={(o) => !o && setDel(null)}
+        />
         {!full && (
           <Link href="/" className="grid size-8 place-items-center rounded-full text-text-muted hover:text-text" aria-label="Fechar">
             <X size={16} />
@@ -182,14 +221,23 @@ function Panel({ full = false }: { full?: boolean }) {
               + Conversa nova
             </button>
             {sessions.map((s) => (
-              <button key={s.id} className={`flex items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-surface-3 ${s.id === id ? 'bg-surface-3' : ''}`} onClick={() => {
-                  setHist(false)
-                  go(`/chat/${s.id}`)
-                }}>
-                <ProjectIcon id={s.project} size={22} radius={7} className="!shadow-none" />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-bold">{s.title}</span>
-                {s.state === 'running' && <LoaderCircle size={14} className="animate-spin text-ai" />}
-              </button>
+              <div key={s.id} className={`group flex items-center rounded-md hover:bg-surface-3 ${s.id === id ? 'bg-surface-3' : ''}`}>
+                <button className="flex min-w-0 flex-1 items-center gap-2 py-2 pr-1 pl-3 text-left" onClick={() => {
+                    setHist(false)
+                    go(`/chat/${s.id}`)
+                  }}>
+                  <ProjectIcon id={s.project} size={22} radius={7} className="!shadow-none" />
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-bold">{s.title}</span>
+                  {s.state === 'running' && <LoaderCircle size={14} className="animate-spin text-ai" />}
+                </button>
+                <button
+                  className="mr-1 grid size-8 flex-none place-items-center rounded-full text-text-faint opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-surface-2 hover:text-danger focus-visible:opacity-100 pointer-coarse:opacity-100 [@media(hover:none)]:opacity-100"
+                  aria-label={`Excluir conversa: ${s.title}`}
+                  onClick={() => setDel(s)}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
             ))}
             {!sessions.length && <p className="px-3 py-2 text-[12.5px] font-semibold text-text-faint">Nenhuma conversa ainda.</p>}
           </div>

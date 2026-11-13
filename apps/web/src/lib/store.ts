@@ -26,6 +26,7 @@ type S = {
   put(p: Post): void
   move(id: string, to: Status): Promise<Post | null>
   drop(id: string): void
+  forget(id: string): void
   wire(m: Wire): void
   loadProjects(): Promise<void>
   loadConfig(): Promise<void>
@@ -96,11 +97,18 @@ export const useStore = create<S>((set, get) => ({
     set({ posts })
   },
 
+  forget(id) {
+    const chats = { ...get().chats }
+    delete chats[id]
+    set({ chats, sessions: get().sessions.filter((s) => s.id !== id) })
+  },
+
   wire(m) {
     if (m.t === 'post') void get().refresh(m.id)
     if (m.t === 'gone') get().drop(m.id)
     if (m.t === 'config') void get().loadConfig()
     if (m.t === 'chat') get().event(m.id, m.epoch, m.seq, m.ev)
+    if (m.t === 'unchat') get().forget(m.id)
     if (m.t === 'peers') set({ peers: m.list })
   },
 

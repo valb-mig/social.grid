@@ -66,6 +66,7 @@ export const api = {
   unsubscribe: (endpoint: string) => call<{ count: number }>('POST', '/api/push/unsubscribe', { endpoint }),
   test: () => call<{ ok: true }>('POST', '/api/push/test', {}),
   chats: () => call<Session[]>('GET', '/api/chat'),
+  unchat: (id: string) => call<{ ok: true }>('DELETE', `/api/chat/${enc(id)}`, {}),
   chat: (project: string, text: string, images: string[] = []) => call<Session>('POST', '/api/chat', { project, text, ...(images.length ? { images } : {}) }),
   events: (id: string, after = 0, epoch?: string) => call<Log>('GET', `/api/chat/${enc(id)}?after=${after}${epoch ? `&epoch=${enc(epoch)}` : ''}`),
   send: (id: string, text: string, images: string[] = []) => call<{ ok: true }>('POST', `/api/chat/${enc(id)}/send`, { text, ...(images.length ? { images } : {}) }),
