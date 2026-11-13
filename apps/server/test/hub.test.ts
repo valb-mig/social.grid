@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { bus } from '@social-grid/core/bus.ts'
+import { getSessionMessages } from '@anthropic-ai/claude-agent-sdk'
 import { PAST, type Ev } from '@social-grid/core/chat.ts'
 import { ops } from '@social-grid/core/post/ops.ts'
 import { open } from '@social-grid/vault/open.ts'
@@ -34,6 +35,7 @@ async function setup() {
   env(h, f.url)
   const now = () => new Date()
   const got: Got[] = []
+  const bye: string[] = []
   const hubs: ReturnType<typeof hub>[] = []
   const make = () => {
     const x = hub({
@@ -47,6 +49,7 @@ async function setup() {
       now,
       pics: pics(join(base, 'state', 'pics')),
       on: (id, epoch, seq, ev) => got.push({ id, epoch, seq, ev }),
+      gone: (id) => bye.push(id),
     })
     hubs.push(x)
     return x
@@ -55,7 +58,7 @@ async function setup() {
     for (const x of hubs) x.shutdown()
     f.close()
   }
-  return { got, make, v, end }
+  return { got, bye, make, v, end, h, project }
 }
 
 const until = async (got: Got[], from: number, state = 'idle') => {
@@ -119,6 +122,34 @@ test('conversa criada sem texto ganha o título do 1º envio e, depois do servid
       same.events.map((i) => i.seq),
       [fresh.at(-1)!.seq],
     )
+  } finally {
+    end()
+  }
+})
+
+test('excluir conversa com sessão aberta fecha o Claude, apaga o transcript, avisa os aparelhos e mantém o post criado nela', { timeout: 120_000 }, async () => {
+  const { got, bye, make, v, end, project } = await setup()
+  try {
+    const a = make()
+    const s = await a.start('mocha.app', 'Faz um carrossel do mocha')
+    await until(got, 0)
+    await new Promise((r) => setTimeout(r, 200))
+    const meta = (await a.list()).find((m) => m.id === s.id)!
+    const sdk = String(meta.sdk)
+    assert.ok((await getSessionMessages(sdk, { dir: project })).length > 0)
+    const made = (await a.events(s.id, 0)).events.find((i) => i.ev.k === 'post')!.ev as { id: string }
+
+    await a.remove(s.id)
+
+    assert.deepEqual(bye, [s.id])
+    assert.equal((await a.list()).some((m) => m.id === s.id), false)
+    assert.deepEqual(await getSessionMessages(sdk, { dir: project }).catch(() => []), [])
+    await assert.rejects(a.events(s.id, 0), /não encontrada/)
+    await assert.rejects(a.send(s.id, 'oi'), /não encontrada/)
+    await assert.rejects(a.remove(s.id), /não encontrada/)
+    assert.equal((await v.repo.get(made.id))?.project, 'mocha.app')
+    const b = make()
+    assert.equal((await b.list()).some((m) => m.id === s.id), false)
   } finally {
     end()
   }

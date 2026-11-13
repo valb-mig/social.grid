@@ -30,6 +30,7 @@ export type Wire =
   | { t: 'gone'; id: string }
   | { t: 'config' }
   | { t: 'chat'; id: string; epoch: string; seq: number | null; ev: Ev }
+  | { t: 'unchat'; id: string }
   | { t: 'peers'; list: string[] }
   | { t: 'pong' }
 

@@ -48,6 +48,11 @@ export function chat(app: FastifyInstance, d: Deps) {
     return { ok: true }
   })
 
+  app.delete('/api/chat/:id', async (req) => {
+    await hub().remove(params.parse(req.params).id)
+    return { ok: true }
+  })
+
   app.post(PICS, async (req, reply) => {
     uploads()
     const file = await req.file({ limits: { fileSize: MAX_PIC, files: 1, fields: 0, parts: 1 } })

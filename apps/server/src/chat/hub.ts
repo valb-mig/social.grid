@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { getSessionMessages } from '@anthropic-ai/claude-agent-sdk'
+import { deleteSession, getSessionMessages } from '@anthropic-ai/claude-agent-sdk'
 import { PAST, type Ev, type Item, type Log, type Meta, type Session } from '@social-grid/core/chat.ts'
 import { fail } from '@social-grid/core/fault.ts'
 import type { Config } from '@social-grid/core/plan/config.ts'
@@ -31,9 +31,11 @@ export type Deps = {
   posts: () => Promise<Post[]>
   now: () => Date
   on: (id: string, epoch: string, seq: number | null, ev: Ev) => void
+  gone?: (id: string) => void
   pics: Pics
   live?: (o: Opts) => Live
   past?: (sdk: string, dir: string) => Promise<Item[]>
+  drop?: (sdk: string, dir?: string) => Promise<void>
 }
 
 const title = (text?: string) => (text?.trim() ? text.replace(/\s+/g, ' ').trim().slice(0, 60) : NEW)
@@ -42,6 +44,7 @@ export function hub(d: Deps) {
   const lives = new Map<string, Live>()
   const spawn = d.live ?? live
   const read = d.past ?? (async (sdk: string, dir: string) => history(await getSessionMessages(sdk, { dir }).catch(() => [])))
+  const wipe = d.drop ?? ((sdk: string, dir?: string) => deleteSession(sdk, dir ? { dir } : undefined))
   let metas: Meta[] | null = null
 
   async function all(): Promise<Meta[]> {
@@ -152,6 +155,20 @@ export function hub(d: Deps) {
     async stop(id: string): Promise<void> {
       await find(id)
       await lives.get(id)?.stop()
+    },
+
+    async remove(id: string): Promise<void> {
+      const m = await find(id)
+      const l = lives.get(id)
+      lives.delete(id)
+      l?.kill()
+      if (m.sdk) {
+        const project = await d.projects.get(m.project)
+        await wipe(m.sdk, project?.path).catch(() => undefined)
+      }
+      metas = (await all()).filter((x) => x.id !== id)
+      await d.state.write(FILE, metas)
+      d.gone?.(id)
     },
 
     async events(id: string, after: number, epoch = ''): Promise<Log> {

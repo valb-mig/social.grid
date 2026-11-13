@@ -44,6 +44,7 @@ const chat = hub({
   now,
   pics: imgs,
   on: (id, epoch, seq, ev) => r.send({ t: 'chat', id, epoch, seq, ev }),
+  gone: (id) => r.send({ t: 'unchat', id }),
 })
 
 const pol = policy([`127.0.0.1:${PORT}`, `localhost:${PORT}`, ...(DEV ? ['localhost:5173', '127.0.0.1:5173'] : [])], LOGINS)

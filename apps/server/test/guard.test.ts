@@ -56,6 +56,8 @@ test('DELETE sem Origin, de outra origem ou sem JSON é recusado e o post contin
   const url = `/api/posts/${post.id}`
   assert.equal((await app.inject({ method: 'DELETE', url, headers: { host: LOCAL, 'content-type': 'application/json' }, body: '{}' })).statusCode, 403)
   assert.equal((await app.inject({ method: 'DELETE', url, headers: { host: LOCAL } })).statusCode, 403)
+  assert.equal((await app.inject({ method: 'DELETE', url: '/api/chat/0b6f8a3e-2c1d-4e5f-9a7b-1c2d3e4f5a6b', headers: { host: LOCAL, 'content-type': 'application/json' }, body: '{}' })).statusCode, 403)
+  assert.equal((await app.inject({ method: 'DELETE', url: '/api/chat/0b6f8a3e-2c1d-4e5f-9a7b-1c2d3e4f5a6b', headers: { ...json, origin: 'http://evil.com' }, body: '{}' })).statusCode, 403)
   assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...json, origin: 'null' }, body: '{}' })).statusCode, 403)
   assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...json, origin: 'http://evil.com' }, body: '{}' })).statusCode, 403)
   assert.equal((await app.inject({ method: 'DELETE', url, headers: { ...json, 'content-type': 'text/plain' }, body: '{}' })).statusCode, 415)
