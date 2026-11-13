@@ -382,20 +382,22 @@ function Caption({ e, plain = false }: { e: Edit; plain?: boolean }) {
   const over = total > net.max
   const c = color(e.post.network)
   const counter = (
-    <span
-      className={`pointer-events-none absolute right-5 bottom-4 bg-surface-2 pl-2 font-mono text-xs ${over ? 'text-danger' : 'text-text-muted'}`}
-      title={tags ? `legenda ${num(cap)} + hashtags ${num(tags)} = ${num(total)} de ${num(net.max)}` : undefined}
-    >
-      {tags ? `legenda ${num(cap)} + hashtags ${num(tags)} = ${num(total)}` : num(total)} / {num(net.max)}
-    </span>
+    <div className="pointer-events-none flex flex-none justify-end px-5 pt-1 pb-4">
+      <span
+        className={`text-right font-mono text-xs ${over ? 'text-danger' : 'text-text-muted'}`}
+        title={tags ? `legenda ${num(cap)} + hashtags ${num(tags)} = ${num(total)} de ${num(net.max)}` : undefined}
+      >
+        {tags ? `legenda ${num(cap)} + hashtags ${num(tags)} = ${num(total)}` : num(total)} / {num(net.max)}
+      </span>
+    </div>
   )
-  const box = 'relative min-h-[220px] flex-1 rounded-xl border border-border bg-surface-2 text-[14.5px] leading-[1.55]'
+  const box = 'relative flex min-h-[220px] flex-1 flex-col rounded-xl border border-border bg-surface-2 text-[14.5px] leading-[1.55]'
   if (edit || plain || !e.post.caption.trim()) {
     return (
       <div className={box}>
         <textarea
           autoFocus={edit}
-          className="absolute inset-0 size-full resize-none px-6 pt-5 pb-10 placeholder:text-text-faint"
+          className="min-h-0 w-full flex-1 resize-none px-6 pt-5 pb-1 placeholder:text-text-faint"
           placeholder="Escreva a legenda. A primeira linha é o gancho."
           value={e.post.caption}
           onChange={(ev) => e.change({ caption: ev.target.value })}
@@ -411,24 +413,26 @@ function Caption({ e, plain = false }: { e: Edit; plain?: boolean }) {
   const rest = lines.slice(1).join('\n').trim()
   const paras = rest ? rest.split(/\n\s*\n/) : []
   return (
-    <div className={`${box} cursor-text overflow-hidden px-6 pt-5 pb-10`} onClick={() => setEdit(true)}>
-      <p>
-        <span className="-ml-1 rounded-md px-1 py-px" style={{ background: `color-mix(in srgb, ${c} 16%, transparent)` }}>
-          {h.head}
-        </span>
-        {first.slice(h.head.length)}
-      </p>
-      {paras.length > 0 && (
-        <div className="my-3 flex items-center gap-2 text-[11px] font-extrabold tracking-[.05em]" style={{ color: c }}>
-          CORTE DO "MAIS"
-          <span className="flex-1 border-t-[1.5px] border-dashed" style={{ borderColor: `color-mix(in srgb, ${c} 55%, transparent)` }} />
-        </div>
-      )}
-      {paras.map((p, i) => (
-        <p key={i} className="mt-3 whitespace-pre-line first-of-type:mt-0">
-          {p}
+    <div className={`${box} cursor-text overflow-hidden`} onClick={() => setEdit(true)}>
+      <div className="min-h-0 flex-1 overflow-hidden px-6 pt-5">
+        <p>
+          <span className="-ml-1 rounded-md px-1 py-px" style={{ background: `color-mix(in srgb, ${c} 16%, transparent)` }}>
+            {h.head}
+          </span>
+          {first.slice(h.head.length)}
         </p>
-      ))}
+        {paras.length > 0 && (
+          <div className="my-3 flex items-center gap-2 text-[11px] font-extrabold tracking-[.05em]" style={{ color: c }}>
+            CORTE DO "MAIS"
+            <span className="flex-1 border-t-[1.5px] border-dashed" style={{ borderColor: `color-mix(in srgb, ${c} 55%, transparent)` }} />
+          </div>
+        )}
+        {paras.map((p, i) => (
+          <p key={i} className="mt-3 whitespace-pre-line first-of-type:mt-0">
+            {p}
+          </p>
+        ))}
+      </div>
       {counter}
     </div>
   )

@@ -66,7 +66,7 @@ export function Slides({ post }: { post: Post }) {
     else void el.requestFullscreen().catch(() => undefined)
   }
 
-  if (!n) return <div className={`mx-auto grid w-full ${frame(post)} place-items-center rounded-xl bg-surface-3 text-sm font-bold text-text-faint`}>sem mídia</div>
+  if (!n) return null
 
   return (
     <div className="flex flex-col gap-2.5">
