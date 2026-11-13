@@ -1,5 +1,6 @@
 export type Events = {
   post: { id: string }
+  gone: { id: string }
   config: Record<string, never>
 }
 

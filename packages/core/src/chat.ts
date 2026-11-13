@@ -27,6 +27,7 @@ export type Session = Meta & { state: State }
 
 export type Wire =
   | { t: 'post'; id: string }
+  | { t: 'gone'; id: string }
   | { t: 'config' }
   | { t: 'chat'; id: string; epoch: string; seq: number | null; ev: Ev }
   | { t: 'peers'; list: string[] }

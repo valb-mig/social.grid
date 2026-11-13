@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -180,4 +180,41 @@ test('feed com a 2ª mídia vira carrossel; 21ª mídia é recusada e o arquivo 
   const files = (await readdir(join(dir, 'posts', li.post.id))).filter((f) => f.startsWith('m-'))
   assert.equal(files.length, 20)
   assert.equal((await repo.get(li.post.id))?.media.length, 20)
+})
+
+test('excluir rascunho move a pasta com a mídia para .lixeira, some da lista e emite gone; segunda vez é not_found', async () => {
+  const { dir, repo } = await setup()
+  const b = bus()
+  const seen: string[] = []
+  b.on('gone', (e) => seen.push(e.id))
+  const o = ops({ repo, config: async () => defaults(), bus: b, now })
+  const { post } = await o.create({ network: 'instagram', format: 'feed', title: 'Rascunho que não vai', caption: 'x' })
+  const src = join(dir, 'slide.png')
+  await writeFile(src, PNG)
+  const { name } = await o.attach(post.id, src, 'png')
+  const fica = await o.create({ network: 'instagram', format: 'feed', title: 'Fica', caption: 'y' })
+
+  await o.remove(post.id)
+  assert.deepEqual(seen, [post.id])
+  assert.equal(await lstat(join(dir, 'posts', post.id)).catch(() => null), null)
+  const bin = await readdir(join(dir, '.lixeira'))
+  assert.equal(bin.length, 1)
+  assert.match(bin[0]!, new RegExp(`^${post.id}-\\d{8}-\\d{6}$`))
+  assert.deepEqual((await readdir(join(dir, '.lixeira', bin[0]!))).sort(), [name, 'post.md'].sort())
+  assert.equal(await repo.get(post.id), null)
+  assert.deepEqual((await posts(dir).list()).map((p) => p.id), [fica.post.id])
+  await assert.rejects(o.remove(post.id), (e) => e instanceof Fault && e.code === 'not_found')
+  await assert.rejects(o.patch(post.id, { caption: 'z' }), (e) => e instanceof Fault && e.code === 'not_found')
+  await assert.rejects(o.remove('../config.json'), (e) => e instanceof Fault && e.code === 'not_found')
+  assert.deepEqual(seen, [post.id])
+})
+
+test('excluir espera a edição em andamento no mesmo post e não deixa nada para trás', async () => {
+  const { dir, repo, o } = await setup()
+  const { post } = await o.create({ network: 'instagram', format: 'feed', title: 'Corrida', caption: 'x' })
+  const results = await Promise.allSettled([o.patch(post.id, { caption: 'antes' }), o.remove(post.id), o.patch(post.id, { caption: 'depois' })])
+  assert.deepEqual(results.map((r) => r.status), ['fulfilled', 'fulfilled', 'rejected'])
+  const [moved] = await readdir(join(dir, '.lixeira'))
+  assert.match(await readFile(join(dir, '.lixeira', moved!, 'post.md'), 'utf8'), /\nantes\n$/)
+  assert.deepEqual(await repo.list(), [])
 })

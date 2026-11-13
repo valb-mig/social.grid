@@ -1,5 +1,5 @@
 import { watch as fsWatch, type FSWatcher } from 'node:fs'
-import { mkdir } from 'node:fs/promises'
+import { lstat, mkdir } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import type { Bus } from '@social-grid/core/bus.ts'
 import { ID } from '@social-grid/core/post/post.ts'
@@ -27,7 +27,10 @@ export async function watch(vault: string, bus: Bus, mine: Mine, wait = 200): Pr
       const id = String(file).split(sep)[0] ?? ''
       if (!ID.test(id)) return
       later(`post:${id}`, async () => {
-        if (!(await mine.post(id))) bus.emit('post', { id })
+        if (await mine.post(id)) return
+        const st = await lstat(join(posts, id, 'post.md')).catch(() => null)
+        if (st?.isFile()) bus.emit('post', { id })
+        else bus.emit('gone', { id })
       })
     }),
     fsWatch(vault, (_e, file) => {

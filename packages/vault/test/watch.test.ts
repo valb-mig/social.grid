@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -16,12 +16,14 @@ async function setup() {
   await mkdir(v.dir, { recursive: true })
   const seen = bus()
   const posts: string[] = []
+  const gone: string[] = []
   let configs = 0
   seen.on('post', (e) => posts.push(e.id))
+  seen.on('gone', (e) => gone.push(e.id))
   seen.on('config', () => configs++)
   const o = ops({ repo: v.repo, config: v.cfg.load, bus: bus(), now: () => new Date() })
   const stop = await watch(v.dir, seen, { post: v.repo.mine, config: v.cfg.mine }, 100)
-  return { v, o, posts, configs: () => configs, stop }
+  return { v, o, posts, gone, configs: () => configs, stop }
 }
 
 test('edição à mão no post.md e pasta nova emitem 1 evento cada; escrita do próprio app não duplica', async () => {
@@ -59,6 +61,24 @@ test('config.json salvo pelo app não emite; editado à mão emite 1 vez', async
     await settle()
     assert.equal(configs(), 1)
     assert.equal((await v.cfg.load()).model, 'sonnet')
+  } finally {
+    stop()
+  }
+})
+
+test('exclusão pelo app não emite de novo pelo watcher; pasta apagada à mão emite gone 1 vez', async () => {
+  const { v, o, posts, gone, stop } = await setup()
+  try {
+    const a = await o.create({ network: 'instagram', format: 'feed', title: 'Excluído no app', caption: 'x' })
+    const b = await o.create({ network: 'instagram', format: 'feed', title: 'Apagado no terminal', caption: 'y' })
+    await settle()
+    await o.remove(a.post.id)
+    await settle()
+    assert.deepEqual(gone, [])
+    await rm(join(v.repo.dir, b.post.id), { recursive: true })
+    await settle()
+    assert.deepEqual(gone, [b.post.id])
+    assert.deepEqual(posts, [])
   } finally {
     stop()
   }

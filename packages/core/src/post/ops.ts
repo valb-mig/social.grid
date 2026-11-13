@@ -103,6 +103,11 @@ export function ops(d: Deps) {
       }
     },
 
+    async remove(id: string): Promise<void> {
+      await d.repo.remove(id)
+      d.bus.emit('gone', { id })
+    },
+
     async get(id: string): Promise<Result> {
       const post = await d.repo.get(id)
       if (!post) fail('not_found', `post não encontrado: ${id}`)

@@ -7,6 +7,7 @@ export type Repo = {
   update(id: string, fn: (post: Post) => Post, base?: string): Promise<Post>
   attach(id: string, src: string, ext: string, move?: boolean): Promise<string>
   drop(id: string, name: string): Promise<void>
+  remove(id: string): Promise<void>
   temp(id: string): Promise<string>
   file(id: string, name: string): Promise<string | null>
 }

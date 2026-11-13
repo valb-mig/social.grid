@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { constants } from 'node:fs'
 import { copyFile, lstat, mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { isDay, isHm } from '@social-grid/core/day.ts'
+import { clock, fmt, isDay, isHm } from '@social-grid/core/day.ts'
 import { fail } from '@social-grid/core/fault.ts'
 import { find, nets, rules } from '@social-grid/core/network/index.ts'
 import { GERAL, ID, MEDIA, STATUSES, slug, type Fresh, type Post } from '@social-grid/core/post/post.ts'
@@ -84,10 +84,16 @@ export function encode(p: Post): string {
 const rand = (n: number) =>
   [...randomBytes(n)].map((b) => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('')
 
-export type Posts = Repo & { dir: string; mine(id: string): Promise<boolean> }
+export type Posts = Repo & { dir: string; bin: string; mine(id: string): Promise<boolean> }
+
+export const BIN = '.lixeira'
+const GONE = -1
+
+const stamp = (d: Date) => `${fmt(d).replace(/-/g, '')}-${clock(d).replace(':', '')}${String(d.getSeconds()).padStart(2, '0')}`
 
 export function posts(vault: string): Posts {
   const dir = join(vault, 'posts')
+  const bin = join(vault, BIN)
   const lock = locks()
   const cache = new Map<string, { mtime: number; post: Post }>()
   const own = new Map<string, number>()
@@ -123,6 +129,7 @@ export function posts(vault: string): Posts {
 
   return {
     dir,
+    bin,
 
     async list() {
       const names = await readdir(dir).catch(() => [] as string[])
@@ -191,6 +198,30 @@ export function posts(vault: string): Posts {
       await rm(join(folder(id), name), { force: true })
     },
 
+    remove(id) {
+      return lock(id, async () => {
+        const from = folder(id)
+        const st = await lstat(from).catch(() => null)
+        if (!st?.isDirectory()) fail('not_found', `post não encontrado: ${id}`)
+        await mkdir(bin, { recursive: true })
+        const at = stamp(new Date())
+        for (let i = 0; i < 6; i++) {
+          const to = join(bin, i ? `${id}-${at}-${rand(4)}` : `${id}-${at}`)
+          if (await lstat(to).catch(() => null)) continue
+          own.set(id, GONE)
+          cache.delete(id)
+          try {
+            await rename(from, to)
+          } catch (err) {
+            own.delete(id)
+            throw err
+          }
+          return
+        }
+        fail('conflict', 'não deu para mover o post para a lixeira')
+      })
+    },
+
     async temp(id) {
       return join(await exists(id), `.up-${randomBytes(6).toString('hex')}.tmp`)
     },
@@ -205,7 +236,7 @@ export function posts(vault: string): Posts {
     async mine(id) {
       if (!ID.test(id)) return false
       const st = await stat(md(id)).catch(() => null)
-      return !!st && own.get(id) === st.mtimeMs
+      return own.get(id) === (st ? st.mtimeMs : GONE)
     },
   }
 }
