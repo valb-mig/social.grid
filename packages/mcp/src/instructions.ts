@@ -3,7 +3,7 @@ import { nets } from '@social-grid/core/network/index.ts'
 const formats = nets.map((n) => `${n.name}: ${n.formats.map((f) => `${f.id} (${f.hint})`).join(', ')}`).join('. ')
 
 export const instructions = `O social.grid é o painel em que o usuário planeja e prepara os posts dos projetos dele no Instagram e no LinkedIn. Pelas ferramentas daqui você lê a agenda e cria ou ajusta posts, que aparecem na hora no app (no PC e no celular).
-- Vault: cada post é a pasta posts/<id>/ com post.md (frontmatter com rede, formato, status, data, hora, hashtags e mídia; a legenda é o corpo) e os arquivos de mídia ao lado. Nada aqui apaga post.
+- Vault: cada post é a pasta posts/<id>/ com post.md (frontmatter com rede, formato, status, data, hora, hashtags e mídia; a legenda é o corpo) e os arquivos de mídia ao lado. Nada aqui apaga post: excluir é só no app, pelo usuário, e o post vai para a lixeira do vault.
 - Datas são YYYY-MM-DD e horas HH:MM, no horário local do PC (America/Sao_Paulo). listar_slots mostra os horários que a config pede e ainda estão vazios.
 - Projetos: listar_projetos dá os repositórios git da pasta de projetos (id = nome da pasta). Post que não é de um projeto vai em "geral".
 - Formatos. ${formats}.

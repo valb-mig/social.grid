@@ -7,7 +7,8 @@ import { test } from 'node:test'
 import { bus } from '@social-grid/core/bus.ts'
 import { ops } from '@social-grid/core/post/ops.ts'
 import { open } from '@social-grid/vault/open.ts'
-import { find, reply, type Ctx } from '../src/tools.ts'
+import { instructions } from '../src/instructions.ts'
+import { find, reply, tools, type Ctx } from '../src/tools.ts'
 
 async function setup() {
   const base = await mkdtemp(join(tmpdir(), 'sg-mcp-'))
@@ -130,4 +131,24 @@ test('no chat de um projeto, o agente não mexe em post de outro projeto, não m
   const id = (JSON.parse(geral) as { post: { id: string } }).post.id
   assert.equal((await run('editar_post', { id, hora: '18:00' })).isError, undefined)
   assert.equal((await reply(() => find('editar_post')!.run(ctx, { id: outro.post.id, legenda: 'o terminal edita qualquer post' }))).isError, undefined)
+})
+
+test('o MCP não expõe exclusão: nenhuma ferramenta apaga post, nem pelo editar_post', async () => {
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['anexar_midia', 'criar_post', 'editar_post', 'ler_config', 'ler_post', 'listar_posts', 'listar_projetos', 'listar_slots'])
+  const del = /exclu|apag|remov|delet|lixeira|arquiv/i
+  for (const t of tools) {
+    assert.doesNotMatch(t.name, del)
+    assert.doesNotMatch(t.description, /exclu|remov|delet|lixeira|arquiv|apaga\S* (o |um )?post/i, t.name)
+    assert.ok(!Object.keys(t.shape).some((k) => del.test(k)), t.name)
+  }
+  assert.match(instructions, /excluir é só no app/)
+
+  const { v, ctx } = await setup()
+  const r = (await find('criar_post')!.run(ctx, args)) as { post: { id: string } }
+  let removed = 0
+  const spy: Ctx = { ...ctx, ops: { ...ctx.ops, remove: async () => void removed++ }, repo: { ...ctx.repo, remove: async () => void removed++ } }
+  for (const name of ['editar_post', 'anexar_midia']) await reply(() => find(name)!.run(spy, { id: r.post.id, excluir: true, arquivado: true, apagar: true, caminho: '/x' }))
+  assert.equal(removed, 0)
+  assert.equal((await v.repo.get(r.post.id))?.archived, false)
+  assert.ok(await v.repo.get(r.post.id))
 })
