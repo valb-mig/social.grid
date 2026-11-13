@@ -1,0 +1,18 @@
+{
+  "name": "social.grid",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.28.4",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @social-grid/server --filter @social-grid/web dev",
+    "build": "pnpm --filter @social-grid/web build",
+    "start": "pnpm --filter @social-grid/server start",
+    "test": "TZ=America/Sao_Paulo node --test --test-concurrency=1 \"packages/*/test/*.test.ts\" \"apps/*/test/*.test.ts\"",
+    "check": "pnpm -r check",
+    "mcp": "node packages/mcp/src/stdio.ts",
+    "seed": "node apps/server/scripts/seed.ts"
+  }
+}
