@@ -7,8 +7,8 @@ import { Bell, Check, Clock, Copy, Hash, LoaderCircle, Settings2, Share } from '
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'wouter'
 import { PostIcon } from '../components/project.tsx'
+import { Strip } from '../components/slides.tsx'
 import { St } from '../components/ui.tsx'
-import { api } from '../lib/api.ts'
 import { kind, late, longDay, next, until } from '../lib/fmt.ts'
 import { ask } from '../lib/novo.ts'
 import { enable, status, type PushState } from '../lib/push.ts'
@@ -87,7 +87,7 @@ function Nothing({ gaps }: { gaps: number }) {
 
 function Big({ p, now }: { p: Post; now: Date }) {
   const [, go] = useLocation()
-  const put = useStore((s) => s.put)
+  const move = useStore((s) => s.move)
   const fail = useStore((s) => s.fail)
   const [flash, setFlash] = useState('')
   const pk = bundle(p)
@@ -98,13 +98,6 @@ function Big({ p, now }: { p: Post; now: Date }) {
   const say = (t: string) => {
     setFlash(t)
     setTimeout(() => setFlash(''), 2200)
-  }
-  const move = async (to: Post['status']) => {
-    try {
-      put((await api.move(p.id, to)).post)
-    } catch (e) {
-      fail(e instanceof Error ? e.message : 'não deu')
-    }
   }
   const [first, ...rest] = pk.caption.split('\n')
   return (
@@ -123,13 +116,7 @@ function Big({ p, now }: { p: Post; now: Date }) {
         </div>
         <span className="hr ml-auto text-[15px]">{p.time ?? ''}</span>
       </button>
-      {p.media.length > 0 && (
-        <div className="flex gap-1.5">
-          {p.media.slice(0, 3).map((m) => (
-            <img key={m} src={api.media(p.id, m)} alt="" className="aspect-[4/5] min-w-0 flex-1 rounded-md object-cover" />
-          ))}
-        </div>
-      )}
+      <Strip post={p} />
       {pk.caption && (
         <p className="text-[13.5px] leading-[1.45] text-text-muted">
           <b className="text-text">{first}</b> {rest.join(' ').trim().slice(0, 90)}
@@ -190,12 +177,12 @@ function Big({ p, now }: { p: Post; now: Date }) {
         </button>
       )}
       {p.status === 'ready' ? (
-        <button className="btn ok" onClick={() => void move('posted')}>
+        <button className="btn ok" onClick={() => void move(p.id, 'posted')}>
           <Check size={16} />
           Marcar postado
         </button>
       ) : (
-        <button className="btn ok" onClick={() => void move('ready')}>
+        <button className="btn ok" onClick={() => void move(p.id, 'ready')}>
           <Check size={16} />
           Marcar pronto
         </button>
