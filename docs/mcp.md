@@ -28,6 +28,8 @@ Ele lê o vault de `SOCIAL_GRID_VAULT` ou `~/SocialGrid`. O que ele grava aparec
 | `editar_post` | `{id, atualizado_em?, ...campos, ordem_midia?, status?}`: muda só o que vier; `atualizado_em` evita sobrescrever uma edição feita no app |
 | `anexar_midia` | `{id, caminho}`: copia uma imagem ou um vídeo de dentro da pasta de projetos ou do vault, até 100 MB, conferindo o tipo pelos bytes; feed do Instagram que passa de 1 mídia vira carrossel |
 
+Não existe ferramenta de excluir post, nem no chat nem no terminal: excluir é só no app, pelo usuário, e o post vai para a lixeira do vault. O teste `o MCP não expõe exclusão` trava a lista de ferramentas.
+
 No chat existe também `git` (`{sub, args}`), que lê `log`, `show`, `diff` e `status` do projeto da conversa sem shell, e recusa repositório cujo `.git/config` chama programa externo.
 
 No chat do app as ferramentas recebem o contexto da conversa: `editar_post` e `anexar_midia` só valem para posts do projeto da conversa ou criados nela, `anexar_midia` só aceita arquivo da pasta desse projeto e o status vai só até `ready` (marcar como postado é do usuário). O servidor stdio do terminal não tem essas travas.

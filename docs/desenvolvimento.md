@@ -44,15 +44,17 @@ Ficam em `packages/*/test` e `apps/*/test`, com cenários de uso real:
 - pacote do carrossel na ordem salva;
 - lembretes: pronto às 11:45, rascunho das 08:00 avisado às 07:45, post das 00:10 avisado às 23:55 da véspera;
 - vault: criar, anexar, mudar a data e reler do disco; frontmatter sem injeção; conflito por `updatedAt`; edições simultâneas; `post.md` sem cada campo e mínimo escrito à mão; feed que vira carrossel e 21ª mídia recusada sem deixar arquivo;
-- watch: edição à mão e pasta nova emitem 1 evento, escrita do próprio app não duplica;
-- MCP: `criar_post` grava e emite no bus; `anexar_midia` recusa arquivo de fora; no contexto do chat, post de outro projeto, status postado e arquivo de fora do projeto são recusados;
+- vault: excluir rascunho move a pasta com a mídia para `.lixeira`, emite `gone` e a segunda vez é `not_found`; exclusão espera a edição em andamento no mesmo post;
+- watch: edição à mão e pasta nova emitem 1 evento, escrita do próprio app não duplica; exclusão pelo app não emite de novo e pasta apagada à mão emite `gone`;
+- MCP: a lista de ferramentas é fechada e nenhuma exclui post; `criar_post` grava e emite no bus; `anexar_midia` recusa arquivo de fora; no contexto do chat, post de outro projeto, status postado e arquivo de fora do projeto são recusados;
 - skills numa HOME temporária, com `../`, nome fora da lista, link simbólico e exclamação seguida de crase recusados;
-- guard (Host, origem, tipo do corpo, WebSocket, login da tailnet), inscrição de push e a pílula com o aparelho conectado pela tailnet;
+- guard (Host, origem, tipo do corpo, WebSocket, login da tailnet), `DELETE` sem `Origin`, de outra origem ou de outra conta da tailnet recusado, inscrição de push e a pílula com o aparelho conectado pela tailnet;
+- WebSocket: post excluído no PC chega como `gone` na segunda conexão (o celular);
 - relógio de verdade com timers simulados: liga às 11:44:30, roda na virada do minuto e avisa uma vez;
-- rotas com `fastify.inject`: listar por intervalo, upload com mime proibido e SVG disfarçado, imagem do chat;
+- rotas com `fastify.inject`: excluir move a pasta para `.lixeira`, emite `gone`, libera o slot e o post some da API; listar por intervalo, upload com mime proibido e SVG disfarçado, imagem do chat;
 - política do chat: leitura fora do projeto, a lista de segredos, escrita, shell, WebFetch fora da lista, git com opções perigosas e repositório com filtro no `.git/config`;
 - chat com o Claude Code de verdade contra uma API falsa local (`apps/server/test/claude.ts`), numa HOME temporária: hook do `.claude/settings.json` do repositório não roda, `Grep` sem caminho não devolve `.env`, `Read` do `.envrc` é negado, erro sem login em português, e conversa que reabre depois do servidor reiniciar com epoch novo, sem perder mensagem nem o cartão do post;
-- app web: a store ignora evento de conversa não aberta e recarrega tudo quando o epoch muda.
+- app web: a store ignora evento de conversa não aberta, recarrega tudo quando o epoch muda e tira o post ao receber `gone` (ou quando o GET dele volta 404).
 
 ## Padrões do código
 

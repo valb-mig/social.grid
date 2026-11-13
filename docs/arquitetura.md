@@ -24,7 +24,7 @@ Dependências permitidas:
 - `day.ts`: datas `YYYY-MM-DD` e horas `HH:MM` locais (America/Sao_Paulo, o fuso do PC). Toda função que depende de hoje recebe `now`; o core nunca chama `new Date()` sozinho.
 - `post/post.ts`: o tipo `Post`, criação (`make`), mudança (`patch`), slug do id e normalização de hashtags.
 - `post/status.ts`: máquina de status pura, `move(post, para, { now, issues })`. Rascunho vai a pronto só sem erro da rede; pronto volta a rascunho; postado é final e só volta a pronto no mesmo dia. Postado grava `postedAt`.
-- `post/ops.ts`: casos de uso (`create`, `patch`, `move`, `attach`, `get`). Recebem as portas (`Repo`, leitura da config, `Bus`, `now`, checagem de projeto). Aplicam as hashtags padrão, validam rede e formato, rodam o `check` da rede, mudam o status e emitem no bus. `attach` confere o limite de mídias dentro do lock do post (e apaga a cópia se passar) e troca o formato quando a rede manda (feed do Instagram com 2 mídias ou mais vira carrossel). As rotas HTTP e as ferramentas MCP são adaptadores finos sobre eles.
+- `post/ops.ts`: casos de uso (`create`, `patch`, `move`, `attach`, `remove`, `get`). Recebem as portas (`Repo`, leitura da config, `Bus`, `now`, checagem de projeto). Aplicam as hashtags padrão, validam rede e formato, rodam o `check` da rede, mudam o status e emitem no bus. `attach` confere o limite de mídias dentro do lock do post (e apaga a cópia se passar) e troca o formato quando a rede manda (feed do Instagram com 2 mídias ou mais vira carrossel). `remove` pede ao `Repo` para tirar o post (o vault move a pasta para a lixeira) e emite `gone`. As rotas HTTP e as ferramentas MCP são adaptadores finos sobre eles; o MCP não usa `remove`.
 - `network/*`: Strategy por rede. Cada uma tem formatos, limites e `check(post)` (erro, aviso ou ok) e `pack(post)` (mídia na ordem, legenda, hashtags com #, comentário). O registro (`network/index.ts`) é a fonte dos ids: a config, o zod das ferramentas e a validação de formato derivam dele, então uma rede nova é um arquivo novo mais uma linha no registro.
 - `plan/config.ts`: tipo, defaults e schema zod da config. Nomes de skills e agentes têm regex, listas têm tamanho máximo.
 - `plan/slots.ts`: `slots(config, de, ate, posts)` transforma as regras de frequência em slots e marca os preenchidos. Carrossel ocupa o slot de feed.
@@ -34,7 +34,7 @@ Dependências permitidas:
 
 ## Eventos ao vivo
 
-Regra única: quem escreve emite. O `ops` emite `post { id }` logo depois de gravar. O `watch.ts` observa `posts/` e `config.json` para pegar o que vem de fora (o MCP stdio em outro processo ou edição manual) e ignora o que o próprio processo gravou: o repositório guarda o `mtime` da última escrita de cada post e o watcher compara antes de emitir. Arquivos `.tmp` da escrita atômica também são ignorados. O evento leva só o id; o app refaz o GET daquele post, então um evento repetido não faz mal.
+Regra única: quem escreve emite. O `ops` emite `post { id }` logo depois de gravar e `gone { id }` logo depois de mover o post para a lixeira. O `watch.ts` observa `posts/` e `config.json` para pegar o que vem de fora (o MCP stdio em outro processo ou edição manual) e ignora o que o próprio processo gravou: o repositório guarda o `mtime` da última escrita de cada post (ou a marca de removido) e o watcher compara antes de emitir. Se a pasta ou o `post.md` sumiu, o watcher emite `gone`; senão, `post`. Arquivos `.tmp` da escrita atômica também são ignorados. O evento leva só o id: com `post` o app refaz o GET daquele post, com `gone` ele tira o post da store (e o editor aberto daquele post mostra que ele não existe mais), então um evento repetido não faz mal.
 
 ## Concorrência
 
@@ -71,7 +71,7 @@ Enviar uma mensagem só põe na fila e responde 202; a resposta sai pelo WebSock
 
 - Bind só em `127.0.0.1`. O guard (`guard.ts`) é uma função pura `allow(pedido, política)` chamada num `onRequest` global, que cobre a API, os arquivos do app e o upgrade do WebSocket, pela rota casada.
 - Host precisa ser o local (`127.0.0.1:7338`, `localhost:7338`) ou o nome da tailnet com a porta do serve. Pela tailnet, o `Tailscale-User-Login` precisa ser o dono do nó (lido de `tailscale status --json` no boot e a cada minuto, porque o Tailscale pode subir depois ou trocar de perfil).
-- Métodos que mudam algo exigem `Origin` igual ao Host (ausente ou `null` é recusado) e `Content-Type: application/json`; multipart só na rota de upload. Nenhum GET tem efeito colateral e não existe CORS.
+- Métodos que mudam algo exigem `Origin` igual ao Host (ausente ou `null` é recusado) e `Content-Type: application/json`; multipart só na rota de upload. Vale também para `DELETE /api/posts/:id`, que o app manda com corpo `{}`. Nenhum GET tem efeito colateral e não existe CORS.
 - Respostas com CSP (`frame-ancestors 'none'`), `X-Frame-Options: DENY` e `nosniff`. Ícones de projeto saem com CSP `sandbox`.
 - Upload detecta o tipo pelos bytes, gera o nome no servidor, recusa SVG e HTML e grava em streaming com limite de 100 MB.
 - Ids de post e nomes de mídia passam por regex; o frontmatter é gerado e lido com a lib `yaml` e validado com zod.

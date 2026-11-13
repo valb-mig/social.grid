@@ -10,6 +10,9 @@ Tudo o que é seu fica em arquivos comuns, em `~/SocialGrid` (ou na pasta de `SO
       post.md
       m-25984c648e.jpg
       m-fab473c5ff.jpg
+  .lixeira/
+    rascunho-descartado-k2l3-20261113-141245/
+      post.md
 ```
 
 ## Post
@@ -48,9 +51,19 @@ Seu design ainda mora em print solto no WhatsApp?
 - `type` (opcional): o tipo de post da skill (`bastidores técnico`, `projeto grande`, `post único`), mostrado nas listas no lugar do formato.
 - `status`: `draft`, `ready` ou `posted`. `date` e `time` podem ser `null` (post sem data).
 - `media` é a ordem das mídias. Tirar um nome da lista não apaga o arquivo.
-- `archived: true` esconde o post da agenda sem apagar nada.
+- `archived: true` esconde o post da agenda sem apagar nada. No app, "Arquivar" aparece só em post postado: tira da agenda e guarda o histórico.
 
 Dá para editar `post.md` à mão: o app percebe a mudança e atualiza na hora, inclusive no editor aberto (se você não estiver digitando nele). Campos ausentes ou inválidos voltam ao padrão: sem `network` vira Instagram, formato desconhecido vira o primeiro da rede, sem `status` vira rascunho, sem `title` usa o id, e assim por diante. Um `post.md` com só `title` já entra no app. Nomes de mídia fora do padrão `m-xxxx.ext` são ignorados.
+
+## Lixeira
+
+"Excluir post" (no editor, no PC e no celular, ou no botão direito sobre o post na agenda do PC) não apaga nada: a pasta inteira do post, com a mídia, vai para `.lixeira/<id>-<AAAAMMDD-HHMMSS>` dentro do vault, com a data e hora local da exclusão. É um `rename` dentro do mesmo disco, feito com o lock do post, então uma edição em andamento termina antes e nenhuma outra grava depois.
+
+- O post some da agenda, dos slots e da API na hora, em todos os aparelhos abertos.
+- Para recuperar, mova a pasta de volta para `posts/` com o nome original (sem o sufixo da data). O app percebe e o post volta.
+- Para apagar de vez, apague a pasta da lixeira. O app nunca limpa a lixeira sozinho.
+- Apagar ou mover a pasta de um post à mão em `posts/` também tira o post do app ao vivo.
+- O MCP e o chat não excluem post: não existe ferramenta para isso.
 
 ## config.json
 
