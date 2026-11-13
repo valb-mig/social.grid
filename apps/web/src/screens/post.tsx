@@ -1,12 +1,11 @@
 import { label as dayLabel, weekday } from '@social-grid/core/day.ts'
-import { kind as mediaKind } from '@social-grid/core/media.ts'
 import { find, get, rules, slot } from '@social-grid/core/network/index.ts'
-import { hook, len, num, type Issue, type Pack } from '@social-grid/core/network/net.ts'
+import { hook, len, num, type Issue } from '@social-grid/core/network/net.ts'
 import { slots } from '@social-grid/core/plan/slots.ts'
 import { bundle, check } from '@social-grid/core/post/ops.ts'
 import { line, patch as merge, type Changes, type Post, type Status } from '@social-grid/core/post/post.ts'
-import { Archive, ArrowLeft, Calendar, Check, ChevronDown, Clock, Copy, Ellipsis, GripVertical, Hash, Heart, LoaderCircle, MessageCircle, Plus, Send, Share, Smartphone, Sparkles, Trash2, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Archive, ArrowLeft, Calendar, Check, ChevronDown, Clock, Copy, Ellipsis, GripVertical, Hash, Heart, LoaderCircle, MessageCircle, Plus, Send, Share, Smartphone, Sparkles, Trash2, Undo2, X } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useParams } from 'wouter'
 import { Cal, type Mark } from '../components/cal.tsx'
 import { GONE, Trash } from '../components/confirm.tsx'
@@ -14,9 +13,11 @@ import { Hour } from '../components/hour.tsx'
 import { Pick } from '../components/pick.tsx'
 import { ProjectIcon, useName } from '../components/project.tsx'
 import { useMobile } from '../components/shell.tsx'
+import { Slides, Thumb } from '../components/slides.tsx'
 import { color, NetIcon, St, statusName } from '../components/ui.tsx'
 import { api, ApiError } from '../lib/api.ts'
 import { ask } from '../lib/novo.ts'
+import { draft, read, type Read } from '../lib/review.ts'
 import { copy, share, useMedia } from '../lib/share.ts'
 import { list, useStore } from '../lib/store.ts'
 import { back } from '../lib/trail.ts'
@@ -28,7 +29,7 @@ type Edit = {
   issues: Issue[]
   saved: 'ok' | 'saving' | 'error'
   change(c: Changes, now?: boolean): void
-  move(to: Status): Promise<void>
+  move(to: Status): Promise<boolean>
   upload(list: FileList | File[]): Promise<void>
   remove(): Promise<void>
   busy: boolean
@@ -42,6 +43,7 @@ function useEdit(id: string): Edit | 'gone' | null {
   const fail = useStore((s) => s.fail)
   const note = useStore((s) => s.note)
   const put = useStore((s) => s.put)
+  const shift = useStore((s) => s.move)
   const stored = useStore((s) => s.posts[id])
   const [local, setLocal] = useState<Post | null>(stored ?? null)
   const [saved, setSaved] = useState<Edit['saved']>('ok')
@@ -125,14 +127,11 @@ function useEdit(id: string): Edit | 'gone' | null {
     async move(to) {
       flush()
       await chain.current
-      try {
-        const r = await api.move(id, to)
-        base.current = r.post.updatedAt
-        put(r.post)
-        setLocal(r.post)
-      } catch (e) {
-        fail(e instanceof Error ? e.message : 'não deu para mudar o status')
-      }
+      const p = await shift(id, to)
+      if (!p) return false
+      base.current = p.updatedAt
+      setLocal(p)
+      return true
     },
     async upload(list) {
       flush()
@@ -176,10 +175,13 @@ function One({ id }: { id: string }) {
   const mobile = useMobile()
   const e = useEdit(id)
   const [steps, setSteps] = useState<boolean | null>(null)
+  const view = mobile && e && e !== 'gone' ? (steps ?? e.post.status !== 'draft') : null
+  useEffect(() => {
+    if (view !== null) document.querySelector('main')?.scrollTo({ top: 0 })
+  }, [view])
   if (e === 'gone') return <Gone />
   if (!e) return <div className="p-8 text-text-muted">Carregando…</div>
-  const showSteps = steps ?? (e.post.status !== 'draft')
-  if (mobile) return showSteps ? <Steps e={e} edit={() => setSteps(false)} /> : <MobileEditor e={e} steps={() => setSteps(true)} />
+  if (mobile) return view ? <Steps e={e} edit={() => setSteps(false)} view={(s) => setSteps(s === 'draft' ? false : null)} /> : <MobileEditor e={e} steps={() => setSteps(true)} />
   return (
     <div className="grid h-full min-h-0 grid-cols-[1fr_330px_340px] gap-5 px-6 pb-6">
       <Editor e={e} />
@@ -297,15 +299,6 @@ function Editor({ e }: { e: Edit }) {
       <Tags e={e} />
       {(e.post.network === 'linkedin' || e.post.comment) && <Comment e={e} />}
     </section>
-  )
-}
-
-function Thumb({ post, name, className = '' }: { post: Post; name: string; className?: string }) {
-  const src = api.media(post.id, name)
-  return mediaKind(name) === 'video' ? (
-    <video className={`size-full object-cover ${className}`} src={src} muted playsInline preload="metadata" />
-  ) : (
-    <img className={`size-full object-cover ${className}`} src={src} alt="" draggable={false} />
   )
 }
 
@@ -790,68 +783,107 @@ function MobileEditor({ e, steps }: { e: Edit; steps: () => void }) {
   )
 }
 
-function Slides({ post }: { post: Post }) {
-  const [at, setAt] = useState(0)
-  const n = post.media.length
-  const box = post.network === 'instagram' && (post.format === 'feed' || post.format === 'carrossel') ? 'aspect-[4/5]' : 'aspect-square'
-  if (!n) return <div className={`grid ${box} place-items-center rounded-xl bg-surface-3 text-sm font-bold text-text-faint`}>sem mídia</div>
-  return (
-    <div className="flex flex-col gap-2.5">
-      <div className={`relative ${box} overflow-hidden rounded-xl bg-surface-3`}>
-        <div
-          className="flex size-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-none"
-          onScroll={(ev) => {
-            const el = ev.currentTarget
-            setAt(Math.round(el.scrollLeft / el.clientWidth))
-          }}
-        >
-          {post.media.map((m) => (
-            <div key={m} className="size-full flex-none snap-center">
-              <Thumb post={post} name={m} />
-            </div>
-          ))}
-        </div>
-        {n > 1 && (
-          <span className="absolute top-2.5 right-2.5 grid h-6 place-items-center rounded-full bg-black/55 px-2.5 text-[11.5px] font-extrabold">
-            {at + 1}/{n}
-          </span>
-        )}
-      </div>
-      {n > 1 && (
-        <span className="flex justify-center gap-1.5">
-          {post.media.map((m, i) => (
-            <i key={m} className="size-1.5 rounded-full" style={{ background: i === at ? 'var(--color-text)' : 'var(--color-text-faint)' }} />
-          ))}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function Text({ pk }: { pk: Pack }) {
+function Body({ r, net }: { r: Read; net: string }) {
   const [open, setOpen] = useState(false)
-  const long = pk.caption.split('\n').length > 4 || pk.caption.length > 240
+  const [long, setLong] = useState(false)
+  const inner = useRef<HTMLDivElement>(null)
+  const c = color(net)
+  useLayoutEffect(() => {
+    const el = inner.current
+    if (!el) return
+    const fit = () => setLong(el.offsetHeight > parseFloat(getComputedStyle(el).fontSize) * (r.rest ? 12 : 9.3) + 2)
+    fit()
+    const o = new ResizeObserver(fit)
+    o.observe(el)
+    return () => o.disconnect()
+  }, [!!r.rest])
+  const fold = long && !open
   return (
-    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-surface p-3.5">
-      <p className={`text-[13.5px] leading-[1.5] whitespace-pre-line ${open ? '' : 'line-clamp-4'}`}>{pk.caption || <span className="text-text-faint">sem legenda</span>}</p>
+    <>
+      <div className={`rounded-lg border border-border bg-surface-2 px-4 py-3.5 ${fold ? 'cursor-pointer' : ''}`} onClick={() => fold && setOpen(true)}>
+        <div className={`text-[14.5px] leading-[1.55] ${fold ? `${r.rest ? 'max-h-[12em]' : 'max-h-[9.3em]'} overflow-hidden [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]` : ''}`}>
+          <div ref={inner} className="break-words whitespace-pre-wrap">
+            <p>
+              <span className="-ml-1 box-decoration-clone rounded-md px-1 py-px" style={{ background: `color-mix(in srgb, ${c} 16%, transparent)` }}>
+                {r.head}
+              </span>
+              {r.tail}
+            </p>
+            {r.rest && (
+              <>
+                <div className="my-3 flex items-center gap-2 text-[11px] font-extrabold tracking-[.05em] whitespace-normal" style={{ color: c }}>
+                  CORTE DO "MAIS"
+                  <span className="flex-1 border-t-[1.5px] border-dashed" style={{ borderColor: `color-mix(in srgb, ${c} 55%, transparent)` }} />
+                </div>
+                <p>{r.rest}</p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
       {long && (
-        <button className="self-start text-xs font-extrabold text-text-muted" onClick={() => setOpen(!open)}>
-          {open ? 'ver menos' : 'ver legenda inteira'}
+        <button type="button" className="flex items-center gap-1 self-start text-[12.5px] font-extrabold text-text-muted hover:text-text" onClick={() => setOpen(!open)}>
+          {open ? 'ver menos' : 'ver tudo'}
+          <ChevronDown size={14} className={open ? 'rotate-180' : ''} />
         </button>
       )}
-      {pk.tags && <p className="text-[12.5px] leading-[1.5] font-bold break-words text-text-muted">{pk.tags}</p>}
-      {pk.comment && (
-        <p className="border-t border-border pt-2.5 text-[12.5px] leading-[1.5] break-words text-text-muted">
-          <b className="text-text">Comentário:</b> {pk.comment}
-        </p>
-      )}
-    </div>
+    </>
   )
 }
 
-function Steps({ e, edit }: { e: Edit; edit: () => void }) {
+function Review({ r, net }: { r: Read; net: string }) {
+  const n = get(net)
+  const loud = r.warns.some((i) => i.code.startsWith('tags'))
+  return (
+    <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4">
+      <div className="flex flex-col gap-2.5">
+        <div className="lbl mb-0">
+          <h3>Legenda</h3>
+          <small className={`font-mono text-xs ${r.size > r.max ? 'text-danger' : ''}`}>
+            {num(r.size)} / {num(r.max)}
+          </small>
+        </div>
+        {r.pk.caption ? <Body r={r} net={net} /> : <p className="text-[13.5px] font-semibold text-text-faint">sem legenda</p>}
+      </div>
+      {r.tags.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <div className="lbl mb-0">
+            <h3>Hashtags</h3>
+            <small className={loud ? 'text-draft' : ''}>
+              {r.tags.length} · ideal {n.ideal[0]} a {n.ideal[1]}
+            </small>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {r.tags.map((t) => (
+              <span key={t} className="tag h-[30px] px-3 text-[12.5px]">
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {r.pk.comment && (
+        <div className="flex flex-col gap-2.5">
+          <div className="lbl mb-0">
+            <h3>Primeiro comentário</h3>
+            <small>cole logo depois de postar</small>
+          </div>
+          <p className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-[13.5px] leading-[1.5] font-semibold break-words whitespace-pre-wrap">{r.pk.comment}</p>
+        </div>
+      )}
+      {r.warns.length > 0 && (
+        <div className="border-t border-border pt-3.5">
+          <Checks issues={r.warns} />
+        </div>
+      )}
+    </section>
+  )
+}
+
+function Steps({ e, edit, view }: { e: Edit; edit: () => void; view: (s: Status) => void }) {
   const p = e.post
-  const pk = bundle(p)
+  const r = read(p)
+  const pk = r.pk
   const key = `sg:passos:${p.id}`
   const [done, setDone] = useState<string[]>(() => {
     try {
@@ -861,6 +893,7 @@ function Steps({ e, edit }: { e: Edit; edit: () => void }) {
     }
   })
   const [just, setJust] = useState('')
+  const [busy, setBusy] = useState(false)
   const [, go] = useLocation()
   const media = useMedia(p)
   const fail = useStore((s) => s.fail)
@@ -905,7 +938,7 @@ function Steps({ e, edit }: { e: Edit; edit: () => void }) {
         </button>
       </div>
       <Slides post={p} />
-      <Text pk={pk} />
+      {(pk.caption || pk.tags || pk.comment) && <Review r={r} net={p.network} />}
       <div className="flex flex-col gap-2">
         {items.map(([k, name, act, run], i) => {
           const ok = done.includes(k)
@@ -938,8 +971,17 @@ function Steps({ e, edit }: { e: Edit; edit: () => void }) {
             <Check size={18} />
             Postei, marcar como postado
           </button>
-          <button className="btn g" onClick={() => void e.move('draft')}>
-            Algo errado? Voltar pra rascunho
+          <button
+            className="pill ghost h-11 self-center px-5 text-text-muted hover:text-text"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true)
+              await draft(e.move, view)
+              setBusy(false)
+            }}
+          >
+            {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Undo2 size={15} />}
+            Voltar pra rascunho
           </button>
         </>
       ) : (

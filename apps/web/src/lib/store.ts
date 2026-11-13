@@ -1,10 +1,12 @@
 import type { Ev, Item, Session, State, Wire } from '@social-grid/core/chat.ts'
 import type { Config } from '@social-grid/core/plan/config.ts'
-import type { Post } from '@social-grid/core/post/post.ts'
+import type { Post, Status } from '@social-grid/core/post/post.ts'
 import { create } from 'zustand'
 import { api, type Row } from './api.ts'
 
 export type Chat = { items: Item[]; seq: number; epoch: string; state: State; stream: string }
+
+export type Act = { label: string; run: () => Promise<void> }
 
 type S = {
   posts: Record<string, Post>
@@ -22,6 +24,7 @@ type S = {
   boot(): Promise<void>
   refresh(id: string): Promise<void>
   put(p: Post): void
+  move(id: string, to: Status): Promise<Post | null>
   drop(id: string): void
   wire(m: Wire): void
   loadProjects(): Promise<void>
@@ -31,8 +34,9 @@ type S = {
   loadSessions(): Promise<void>
   event(id: string, epoch: string, seq: number | null, ev: Ev): void
   fail(msg: string): void
-  note(msg: string): void
+  note(msg: string, act?: Act): void
   notice: string
+  act: Act | null
 }
 
 let saving: ReturnType<typeof setTimeout> | undefined
@@ -53,6 +57,7 @@ export const useStore = create<S>((set, get) => ({
   sessions: [],
   error: '',
   notice: '',
+  act: null,
 
   async boot() {
     const [posts] = await Promise.all([api.posts(), get().loadConfig()])
@@ -71,6 +76,17 @@ export const useStore = create<S>((set, get) => ({
 
   put(p) {
     set({ posts: { ...get().posts, [p.id]: p } })
+  },
+
+  async move(id, to) {
+    try {
+      const { post } = await api.move(id, to)
+      get().put(post)
+      return post
+    } catch (e) {
+      get().fail(e instanceof Error ? e.message : 'não deu para mudar o status')
+      return null
+    }
   },
 
   drop(id) {
@@ -151,17 +167,17 @@ export const useStore = create<S>((set, get) => ({
   },
 
   fail(msg) {
-    set({ error: msg, notice: '' })
+    set({ error: msg, notice: '', act: null })
     setTimeout(() => {
       if (get().error === msg) set({ error: '' })
     }, 5000)
   },
 
-  note(msg) {
-    set({ notice: msg, error: '' })
+  note(msg, act) {
+    set({ notice: msg, act: act ?? null, error: '' })
     setTimeout(() => {
-      if (get().notice === msg) set({ notice: '' })
-    }, 5000)
+      if (get().notice === msg) set({ notice: '', act: null })
+    }, act ? 7000 : 5000)
   },
 }))
 

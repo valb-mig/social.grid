@@ -106,14 +106,28 @@ export function Tabs() {
 export function Toast() {
   const error = useStore((s) => s.error)
   const notice = useStore((s) => s.notice)
+  const act = useStore((s) => s.act)
   const text = error || notice
   if (!text) return null
+  const go = act && !error ? act : null
   return (
     <div
       role="status"
-      className={`fixed top-4 left-1/2 z-50 flex min-h-11 max-w-[92vw] -translate-x-1/2 items-center rounded-[22px] px-5 py-2.5 text-[13.5px] font-extrabold text-on-accent shadow-[var(--shadow-pop)] ${error ? 'bg-danger' : 'bg-ready'}`}
+      className={`fixed top-[max(16px,env(safe-area-inset-top))] left-1/2 z-50 flex min-h-11 w-max max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-[22px] pl-5 text-[13.5px] font-extrabold text-on-accent shadow-[var(--shadow-pop)] ${error ? 'bg-danger' : 'bg-ready'} ${go ? 'py-1.5 pr-1.5' : 'py-2.5 pr-5'}`}
     >
       <span>{text}</span>
+      {go && (
+        <button
+          type="button"
+          className="pill line sm"
+          onClick={() => {
+            useStore.setState({ notice: '', act: null })
+            void go.run()
+          }}
+        >
+          {go.label}
+        </button>
+      )}
     </div>
   )
 }
