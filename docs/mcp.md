@@ -1,0 +1,35 @@
+# MCP
+
+As ferramentas do social.grid existem em dois lugares, com o mesmo código (`packages/mcp/src/tools.ts`):
+
+- no chat do app, embutidas no Agent SDK, usando o mesmo repositório e o mesmo bus do servidor;
+- num servidor stdio para o Claude Code do terminal.
+
+## Terminal
+
+Para usar no Claude Code fora do app, registre o servidor stdio uma vez (troque o caminho pela pasta do projeto):
+
+```sh
+claude mcp add -s user social-grid -- node /home/valb/Projects/social.grid/packages/mcp/src/stdio.ts
+```
+
+Ele lê o vault de `SOCIAL_GRID_VAULT` ou `~/SocialGrid`. O que ele grava aparece no app ao vivo pelo watcher do servidor. Para testar à mão: `pnpm mcp`.
+
+## Ferramentas
+
+| nome | o que faz |
+| --- | --- |
+| `listar_projetos` | repositórios da pasta de projetos e `geral`, com atividade no git e contagem de posts por status |
+| `ler_config` | redes, frequência, hashtags padrão, skills e avisos |
+| `listar_posts` | `{de, ate, projeto?, status?, sem_data?}`, até 93 dias |
+| `ler_post` | `{id}`: o post e os avisos da rede |
+| `listar_slots` | `{de, ate}`: só os horários da config ainda vazios |
+| `criar_post` | `{projeto, rede, formato, tipo?, titulo, legenda, hashtags, data?, hora?, comentario?}`: cria em rascunho, com as hashtags padrão, e devolve os avisos da rede |
+| `editar_post` | `{id, atualizado_em?, ...campos, ordem_midia?, status?}`: muda só o que vier; `atualizado_em` evita sobrescrever uma edição feita no app |
+| `anexar_midia` | `{id, caminho}`: copia uma imagem ou um vídeo de dentro da pasta de projetos ou do vault, até 100 MB, conferindo o tipo pelos bytes; feed do Instagram que passa de 1 mídia vira carrossel |
+
+No chat existe também `git` (`{sub, args}`), que lê `log`, `show`, `diff` e `status` do projeto da conversa sem shell, e recusa repositório cujo `.git/config` chama programa externo.
+
+No chat do app as ferramentas recebem o contexto da conversa: `editar_post` e `anexar_midia` só valem para posts do projeto da conversa ou criados nela, `anexar_midia` só aceita arquivo da pasta desse projeto e o status vai só até `ready` (marcar como postado é do usuário). O servidor stdio do terminal não tem essas travas.
+
+As instruções do servidor (`packages/mcp/src/instructions.ts`) explicam o vault, as datas locais e pedem para salvar com `criar_post` o post feito com as skills `instagram-post-writer`, `linkedin-post-writer` ou o agente `social-posts`.
