@@ -683,7 +683,7 @@ function Preview({ post }: { post: Post }) {
       {post.network === 'linkedin' ? (
         <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
           <div className="flex items-center gap-2.5 px-3 py-2.5">
-            <img src="/logo.svg" alt="" className="size-[34px] rounded-full bg-white" />
+            <img src="/logo.svg" alt="" className="size-[34px] rounded-full" />
             <div className="min-w-0 flex-1">
               <b className="block text-[13px]">{handle}</b>
               <small className="text-[11.5px] font-semibold text-text-faint">agora</small>
@@ -708,7 +708,7 @@ function Preview({ post }: { post: Post }) {
       ) : (
         <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
           <div className="flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-extrabold">
-            <img src="/logo.svg" alt="" className="size-[30px] rounded-full bg-white shadow-[0_0_0_2px_var(--color-instagram)]" />
+            <img src="/logo.svg" alt="" className="size-[30px] rounded-full shadow-[0_0_0_2px_var(--color-instagram)]" />
             {handle}
             <Ellipsis size={16} className="ml-auto text-text-muted" />
           </div>

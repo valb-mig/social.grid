@@ -12,7 +12,7 @@ export function ProjectIcon({ id, size = 44, radius, className = '' }: { id: str
   const p = useProject(id)
   const r = radius ?? Math.round(size * 0.27)
   const style = { width: size, height: size, borderRadius: r }
-  if (id === GERAL) return <img className={`ico ${className}`} style={{ ...style, background: '#fff' }} src="/logo.svg" alt="" />
+  if (id === GERAL) return <img className={`ico ${className}`} style={style} src="/logo.svg" alt="" />
   if (p?.icon) return <img className={`ico ${className}`} style={style} src={api.icon(id)} alt="" loading="lazy" />
   return (
     <span className={`ico mono-ico ${className}`} style={{ ...style, fontSize: Math.round(size * 0.36) }}>
