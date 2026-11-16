@@ -10,5 +10,5 @@ export const instructions = `O social.grid é o painel em que o usuário planeja
 - Ao terminar um post feito com as skills de postagem (instagram-post-writer, linkedin-post-writer ou o agente social-posts), salve com criar_post: a legenda vai sem as hashtags, e as hashtags vão sem #. Em tipo vai o tipo de post que a skill usou (ex.: bastidores técnico). No LinkedIn o link vai em comentario, nunca no corpo.
 - criar_post e editar_post devolvem os avisos da rede. Erro impede o post de ficar pronto; aviso é só recomendação.
 - Status: draft (rascunho) -> ready (pronto) -> posted (postado). Só fica pronto sem erro da rede. Marcar como postado é coisa do usuário, depois que ele publicar.
-- Mídia: anexar_midia copia uma imagem ou um vídeo de dentro da pasta de projetos ou do vault para o post. Feed do Instagram com mais de uma mídia vira carrossel sozinho.
+- Mídia: anexar_midia copia uma imagem ou um vídeo de dentro da pasta de projetos ou do vault para o post. Para criar a arte (capa, card, slide), escreva o HTML e chame gerar_imagem: ele vira PNG no tamanho do formato e entra no post. Nunca peça ao usuário para salvar ou converter o HTML. Feed do Instagram com mais de uma mídia vira carrossel sozinho.
 - Nunca use travessão nos textos dos posts.`

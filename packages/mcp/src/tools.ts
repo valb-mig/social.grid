@@ -12,6 +12,7 @@ import { STATUSES, type Changes, type Post } from '@social-grid/core/post/post.t
 import type { Repo } from '@social-grid/core/post/repo.ts'
 import { stats, type Source } from '@social-grid/core/project/project.ts'
 import { z } from 'zod'
+import { render, SIZES, type Shape } from './render.ts'
 
 export type Chat = { project: string; dir: string; made: Set<string> }
 
@@ -89,6 +90,11 @@ async function mine(ctx: Ctx, id: string): Promise<void> {
   const { post } = await ctx.ops.get(id)
   if (post.project !== c.project && !c.made.has(post.id)) fail('refused', `o post ${id} é de outro projeto; nesta conversa só dá para mexer nos posts de ${c.project}`)
 }
+
+const SHAPES: Record<string, Shape> = { 'instagram/story': 'vertical', 'linkedin/artigo': 'paisagem' }
+const sizes = Object.entries(SIZES)
+  .map(([k, s]) => `${k} ${s.w}x${s.h}`)
+  .join(', ')
 
 async function kind(path: string): Promise<string> {
   const fh = await open(path, 'r')
@@ -251,6 +257,25 @@ export const tools: Tool[] = [
         : await inside(a.caminho, await ctx.roots(), 'na pasta de projetos ou no vault')
       const r = await ctx.ops.attach(a.id, real, await kind(real))
       return { ...out(r), arquivo: r.name, ...(r.grew ? { formato_novo: 'o feed virou carrossel porque agora tem mais de uma mídia' } : {}) }
+    },
+  ),
+
+  tool(
+    'gerar_imagem',
+    `Transforma um HTML seu (capa, card, slide do carrossel) em PNG e anexa no fim da mídia do post. A página roda fechada: sem script, sem rede e sem acesso ao disco, então CSS, fontes e imagens vão inline ou em data:. Manrope (400 a 800) e JetBrains Mono (400, 500 e 700) já estão carregadas. O tamanho sai do formato do post (story vertical, artigo do LinkedIn paisagem, o resto retrato) ou de tamanho: ${sizes}. Desenhe o body exatamente nesse tamanho, sem rolagem.`,
+    {
+      id: z.string().max(100),
+      html: z.string().min(1).max(300_000),
+      tamanho: z.enum(['retrato', 'quadrado', 'vertical', 'paisagem']).optional(),
+    },
+    false,
+    async (ctx, a) => {
+      await mine(ctx, a.id)
+      const { post } = await ctx.ops.get(a.id)
+      if (nets.find((n) => n.id === post.network)?.formats.find((f) => f.id === post.format)?.video) fail('invalid', `${post.format} precisa de vídeo, não de imagem`)
+      const s = SIZES[a.tamanho ?? SHAPES[`${post.network}/${post.format}`] ?? 'retrato']
+      const r = await render(a.html, s, (file) => ctx.ops.attach(a.id, file, 'png'))
+      return { ...out(r), arquivo: r.name, tamanho: `${s.w}x${s.h}`, ...(r.grew ? { formato_novo: 'o feed virou carrossel porque agora tem mais de uma mídia' } : {}) }
     },
   ),
 ]
