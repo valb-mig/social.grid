@@ -12,7 +12,7 @@ import { STATUSES, type Changes, type Post } from '@social-grid/core/post/post.t
 import type { Repo } from '@social-grid/core/post/repo.ts'
 import { stats, type Source } from '@social-grid/core/project/project.ts'
 import { z } from 'zod'
-import { render, SIZES, type Shape } from './render.ts'
+import { capture, render, SIZES, type Shape } from './render.ts'
 
 export type Chat = { project: string; dir: string; made: Set<string> }
 
@@ -23,6 +23,7 @@ export type Ctx = {
   projects: Source
   roots: () => Promise<string[]>
   now: () => Date
+  app?: string
   chat?: Chat
 }
 
@@ -95,6 +96,28 @@ const SHAPES: Record<string, Shape> = { 'instagram/story': 'vertical', 'linkedin
 const sizes = Object.entries(SIZES)
   .map(([k, s]) => `${k} ${s.w}x${s.h}`)
   .join(', ')
+
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]'])
+
+function local(url: string, app?: string): string {
+  if (url.startsWith('/') && !url.startsWith('//') && !app) fail('invalid', 'sem o endereço do social.grid, use a URL inteira (http://localhost:porta/...)')
+  let u: URL
+  try {
+    u = new URL(url, url.startsWith('/') && !url.startsWith('//') ? app : undefined)
+  } catch {
+    return fail('invalid', `endereço inválido: ${url}`)
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') fail('refused', 'o print só abre página http deste PC')
+  if (!LOOPBACK.has(u.hostname) || u.username || u.password) fail('refused', 'o print só abre página deste PC: localhost ou 127.0.0.1, em qualquer porta')
+  return u.href
+}
+
+const target = async (ctx: Ctx, id: string) => {
+  await mine(ctx, id)
+  const { post } = await ctx.ops.get(id)
+  if (nets.find((n) => n.id === post.network)?.formats.find((f) => f.id === post.format)?.video) fail('invalid', `${post.format} precisa de vídeo, não de imagem`)
+  return post
+}
 
 async function kind(path: string): Promise<string> {
   const fh = await open(path, 'r')
@@ -270,12 +293,30 @@ export const tools: Tool[] = [
     },
     false,
     async (ctx, a) => {
-      await mine(ctx, a.id)
-      const { post } = await ctx.ops.get(a.id)
-      if (nets.find((n) => n.id === post.network)?.formats.find((f) => f.id === post.format)?.video) fail('invalid', `${post.format} precisa de vídeo, não de imagem`)
+      const post = await target(ctx, a.id)
       const s = SIZES[a.tamanho ?? SHAPES[`${post.network}/${post.format}`] ?? 'retrato']
       const r = await render(a.html, s, (file) => ctx.ops.attach(a.id, file, 'png'))
       return { ...out(r), arquivo: r.name, tamanho: `${s.w}x${s.h}`, ...(r.grew ? { formato_novo: 'o feed virou carrossel porque agora tem mais de uma mídia' } : {}) }
+    },
+  ),
+
+  tool(
+    'capturar_tela',
+    `Tira um print de uma página aberta neste PC e anexa no fim da mídia do post, como PNG. url: endereço de localhost ou 127.0.0.1 em qualquer porta (o app do projeto rodando, por exemplo http://localhost:5173/), ou um caminho do próprio social.grid (/, /hoje, /projetos, /chat, /post/<id>). A página roda normal e o print sai depois que ela carrega os dados. O tamanho da imagem sai do formato do post ou de tamanho (${sizes}). escala (1 a 3) é o zoom: com 2 a página abre com metade da largura (telas estreitas viram o layout de celular) e sai nítida. O app precisa estar rodando. O print mostra dados reais: peça para o usuário conferir antes de publicar.`,
+    {
+      id: z.string().max(100),
+      url: z.string().min(1).max(2000),
+      tamanho: z.enum(['retrato', 'quadrado', 'vertical', 'paisagem']).optional(),
+      escala: z.number().int().min(1).max(3).optional(),
+    },
+    false,
+    async (ctx, a) => {
+      const href = local(a.url, ctx.app)
+      const post = await target(ctx, a.id)
+      const s = SIZES[a.tamanho ?? SHAPES[`${post.network}/${post.format}`] ?? 'retrato']
+      const k = a.escala ?? 1
+      const r = await capture(href, s, k, (file) => ctx.ops.attach(a.id, file, 'png'))
+      return { ...out(r), arquivo: r.name, tamanho: `${s.w}x${s.h}`, pagina: `${href} em ${s.w / k}x${s.h / k}`, ...(r.grew ? { formato_novo: 'o feed virou carrossel porque agora tem mais de uma mídia' } : {}) }
     },
   ),
 ]

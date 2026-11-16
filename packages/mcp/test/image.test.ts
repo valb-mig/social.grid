@@ -154,3 +154,61 @@ test('sem o Chrome no PC, gerar_imagem diz o que falta e não mexe no post', asy
     else process.env.SOCIAL_GRID_CHROME = before
   }
 })
+
+test('capturar_tela tira o print de uma página do PC depois dos dados carregarem, no layout da escala', { skip }, async () => {
+  const { v, chat, run, make } = await setup()
+  const hits: string[] = []
+  const srv = createServer((req, res) => {
+    hits.push(req.url ?? '')
+    if (req.url === '/dados') return void setTimeout(() => res.end('#ffff00'), 300)
+    res.setHeader('content-type', 'text/html; charset=utf-8')
+    res.end(
+      `<!doctype html><style>body{margin:0;height:100vh;background:#ff00ff}@media (max-width:600px){body{background:#00ffff}}</style><body><script>if (location.search === '?dados') fetch('/dados').then((r) => r.text()).then((c) => (document.body.style.background = c))</script></body>`,
+    )
+  })
+  await new Promise<void>((ok) => srv.listen(0, '127.0.0.1', ok))
+  const url = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`
+  const app: Ctx = { ...chat, app: url }
+  try {
+    const largo = await make()
+    const r = await run('capturar_tela', { id: largo, url: `${url}/` }, app)
+    assert.equal(r.isError, undefined, r.content[0]!.text)
+    assert.match(r.content[0]!.text, /em 1080x1350/)
+    assert.deepEqual(await media(v, largo), [{ w: 1080, h: 1350, corner: 'ff00ff' }])
+
+    const celular = await make({ titulo: 'Print no celular' })
+    const c = await run('capturar_tela', { id: celular, url: '/', escala: 2 }, app)
+    assert.match(c.content[0]!.text, /em 540x675/)
+    assert.deepEqual(await media(v, celular), [{ w: 1080, h: 1350, corner: '00ffff' }])
+
+    const dados = await make({ titulo: 'Print com dados' })
+    assert.equal((await run('capturar_tela', { id: dados, url: `${url}/?dados`, tamanho: 'quadrado' }, app)).isError, undefined)
+    assert.deepEqual(await media(v, dados), [{ w: 1080, h: 1080, corner: 'ffff00' }])
+    assert.ok(hits.includes('/dados'))
+  } finally {
+    srv.close()
+  }
+})
+
+test('capturar_tela só abre página deste PC e recusa o resto antes de abrir o Chrome', async () => {
+  const { v, ctx, run, make } = await setup()
+  const id = await make()
+  const urls = [
+    'file:///etc/passwd',
+    'http://example.com/',
+    'http://192.168.0.1/',
+    'http://0.0.0.0:7338/',
+    'http://user:senha@localhost:7338/',
+    'http://localhost.evil.com/',
+    '//localhost:7338/',
+    'javascript:alert(1)',
+    'data:text/html,oi',
+    'ftp://localhost/',
+  ]
+  for (const url of urls) assert.equal((await run('capturar_tela', { id, url })).isError, true, url)
+  assert.match((await run('capturar_tela', { id, url: '/hoje' })).content[0]!.text, /endereço do social\.grid/)
+  const outro = await make({ projeto: 'editr', titulo: 'Post do editr' }, ctx)
+  assert.match((await run('capturar_tela', { id: outro, url: 'http://localhost:7338/' })).content[0]!.text, /outro projeto/)
+  assert.deepEqual((await v.repo.get(id))!.media, [])
+  assert.deepEqual((await v.repo.get(outro))!.media, [])
+})

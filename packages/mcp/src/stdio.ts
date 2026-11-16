@@ -16,6 +16,7 @@ const ctx: Ctx = {
   projects: v.projects,
   roots: async () => [await v.cfg.projects(), v.dir],
   now,
+  app: `http://127.0.0.1:${process.env.SOCIAL_GRID_PORT || 7338}`,
 }
 
 const server = new McpServer({ name: 'social-grid', version: '0.1.0' }, { instructions })

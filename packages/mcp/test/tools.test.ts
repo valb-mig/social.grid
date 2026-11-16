@@ -134,7 +134,7 @@ test('no chat de um projeto, o agente não mexe em post de outro projeto, não m
 })
 
 test('o MCP não expõe exclusão: nenhuma ferramenta apaga post, nem pelo editar_post', async () => {
-  assert.deepEqual(tools.map((t) => t.name).sort(), ['anexar_midia', 'criar_post', 'editar_post', 'gerar_imagem', 'ler_config', 'ler_post', 'listar_posts', 'listar_projetos', 'listar_slots'])
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['anexar_midia', 'capturar_tela', 'criar_post', 'editar_post', 'gerar_imagem', 'ler_config', 'ler_post', 'listar_posts', 'listar_projetos', 'listar_slots'])
   const del = /exclu|apag|remov|delet|lixeira|arquiv/i
   for (const t of tools) {
     assert.doesNotMatch(t.name, del)

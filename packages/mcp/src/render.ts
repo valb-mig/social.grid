@@ -58,24 +58,39 @@ async function chrome(): Promise<string> {
       if (await access(p, constants.X_OK).then(() => true, () => false)) return p
     }
   }
-  return fail('not_found', 'para gerar imagem o app precisa do Google Chrome ou do Chromium no PC')
+  return fail('not_found', 'para gerar imagem ou tirar print o app precisa do Google Chrome ou do Chromium no PC')
 }
 
 let line: Promise<unknown> = Promise.resolve()
 
-export function render<T>(html: string, s: Size, use: (file: string) => Promise<T>): Promise<T> {
-  const job = line.then(() => shot(html, s, use))
+function queue<T>(fn: () => Promise<T>): Promise<T> {
+  const job = line.then(fn)
   line = job.catch(() => undefined)
   return job
 }
 
-async function shot<T>(html: string, s: Size, use: (file: string) => Promise<T>): Promise<T> {
+type Job = { s: Size; scale: number; flags: string[]; target: (dir: string) => Promise<string> }
+
+const LOCKED = ['--proxy-server=http://127.0.0.1:9', '--proxy-bypass-list=<-loopback>']
+
+export function render<T>(html: string, s: Size, use: (file: string) => Promise<T>): Promise<T> {
+  const target = async (dir: string) => {
+    const src = join(dir, 'arte.html')
+    await writeFile(src, page(html, await fonts()))
+    return pathToFileURL(src).href
+  }
+  return queue(() => shot({ s, scale: 1, flags: LOCKED, target }, use))
+}
+
+export function capture<T>(url: string, s: Size, scale: number, use: (file: string) => Promise<T>): Promise<T> {
+  return queue(() => shot({ s, scale, flags: ['--virtual-time-budget=8000'], target: async () => url }, use))
+}
+
+async function shot<T>(j: Job, use: (file: string) => Promise<T>): Promise<T> {
   const bin = await chrome()
   const dir = await mkdtemp(join(tmpdir(), 'sg-arte-'))
   try {
-    const src = join(dir, 'arte.html')
     const out = join(dir, 'arte.png')
-    await writeFile(src, page(html, await fonts()))
     const args = [
       '--headless=new',
       '--disable-gpu',
@@ -84,21 +99,20 @@ async function shot<T>(html: string, s: Size, use: (file: string) => Promise<T>)
       '--no-default-browser-check',
       '--disable-extensions',
       '--mute-audio',
-      '--force-device-scale-factor=1',
+      `--force-device-scale-factor=${j.scale}`,
       `--user-data-dir=${join(dir, 'perfil')}`,
-      '--proxy-server=http://127.0.0.1:9',
-      '--proxy-bypass-list=<-loopback>',
-      `--window-size=${s.w},${s.h}`,
+      ...j.flags,
+      `--window-size=${j.s.w / j.scale},${j.s.h / j.scale}`,
       `--screenshot=${out}`,
-      pathToFileURL(src).href,
+      await j.target(dir),
     ]
-    await run(bin, args, { timeout: 45_000, maxBuffer: 4 << 20 }).catch((e: unknown) => {
+    await run(bin, args, { timeout: 60_000, maxBuffer: 4 << 20 }).catch((e: unknown) => {
       if ((e as { code?: unknown }).code === 'ENOENT') fail('not_found', `o Chrome não está em ${bin}`)
       fail('invalid', 'o Chrome não conseguiu gerar a imagem')
     })
     const png = await readFile(out).catch(() => fail('invalid', 'o Chrome não gerou a imagem'))
     if (png.length < 24 || png.toString('ascii', 1, 4) !== 'PNG') fail('invalid', 'o Chrome não gerou um PNG')
-    if (png.readUInt32BE(16) !== s.w || png.readUInt32BE(20) !== s.h) fail('invalid', 'a imagem saiu com um tamanho diferente do pedido')
+    if (png.readUInt32BE(16) !== j.s.w || png.readUInt32BE(20) !== j.s.h) fail('invalid', 'a imagem saiu com um tamanho diferente do pedido')
     return await use(out)
   } finally {
     await rm(dir, { recursive: true, force: true })
