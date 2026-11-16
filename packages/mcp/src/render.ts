@@ -7,18 +7,18 @@ import type { Readable, Writable } from 'node:stream'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 import { Fault, fail } from '@social-grid/core/fault.ts'
+import type { Shape } from '@social-grid/core/network/net.ts'
 
 const run = promisify(execFile)
 
-export const SIZES = {
+export type Size = { w: number; h: number }
+
+export const SIZES: Record<Shape, Size> = {
   retrato: { w: 1080, h: 1350 },
   quadrado: { w: 1080, h: 1080 },
   vertical: { w: 1080, h: 1920 },
   paisagem: { w: 1920, h: 1080 },
-} as const
-
-export type Shape = keyof typeof SIZES
-export type Size = { w: number; h: number }
+}
 
 export const CSP = "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:"
 

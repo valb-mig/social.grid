@@ -61,6 +61,18 @@ test('criar_post recusa projeto que não existe e formato de outra rede', async 
   assert.equal(bad.isError, true)
   const fmt = await reply(() => find('criar_post')!.run(ctx, { ...args, formato: 'artigo' }))
   assert.equal(fmt.isError, true)
+  assert.equal((await reply(() => find('criar_post')!.run(ctx, { ...args, rede: 'tiktok', formato: 'feed' }))).isError, true)
+  assert.equal((await reply(() => find('criar_post')!.run(ctx, { ...args, rede: 'x', formato: 'post' }))).isError, true)
+})
+
+test('criar_post no YouTube devolve o aviso do título longo e no TikTok o do link na legenda', async () => {
+  const { ctx } = await setup()
+  const yt = (await find('criar_post')!.run(ctx, { ...args, rede: 'youtube', formato: 'shorts', titulo: 'a'.repeat(101) })) as { post: { rede: string }; avisos: string[] }
+  assert.equal(yt.post.rede, 'youtube')
+  assert.ok(yt.avisos.includes('erro: Título em 101 de 100: passou do limite'))
+  const tt = (await find('criar_post')!.run(ctx, { ...args, rede: 'tiktok', formato: 'video', legenda: 'Repo em https://github.com/valb-mig/mocha.app' })) as { avisos: string[] }
+  assert.ok(tt.avisos.some((a) => a.startsWith('aviso: Link na legenda do TikTok')))
+  assert.match(instructions, /no Instagram, no LinkedIn, no TikTok e no YouTube/)
 })
 
 test('anexar_midia aceita imagem de dentro dos projetos e recusa arquivo de fora ou que não é mídia', async () => {

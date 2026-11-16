@@ -3,7 +3,7 @@ import { isAbsolute, sep } from 'node:path'
 import { range } from '@social-grid/core/day.ts'
 import { Fault, fail } from '@social-grid/core/fault.ts'
 import { MAX_BYTES, kind as type, mime, sniff } from '@social-grid/core/media.ts'
-import { ids, nets } from '@social-grid/core/network/index.ts'
+import { ids, nets, shape } from '@social-grid/core/network/index.ts'
 import type { Issue } from '@social-grid/core/network/net.ts'
 import { total, type Config } from '@social-grid/core/plan/config.ts'
 import { open as free, slots } from '@social-grid/core/plan/slots.ts'
@@ -13,7 +13,7 @@ import type { Repo } from '@social-grid/core/post/repo.ts'
 import { stats, type Source } from '@social-grid/core/project/project.ts'
 import { z } from 'zod'
 import { about, dress, MAX, PRINTS, scale, scan, type Spec } from './mockup.ts'
-import { capture, render, SIZES, type Shape } from './render.ts'
+import { capture, render, SIZES } from './render.ts'
 
 export type Chat = { project: string; dir: string; made: Set<string> }
 
@@ -93,7 +93,7 @@ async function mine(ctx: Ctx, id: string): Promise<void> {
   if (post.project !== c.project && !c.made.has(post.id)) fail('refused', `o post ${id} é de outro projeto; nesta conversa só dá para mexer nos posts de ${c.project}`)
 }
 
-const SHAPES: Record<string, Shape> = { 'instagram/story': 'vertical', 'linkedin/artigo': 'paisagem' }
+const shapes = nets.flatMap((n) => n.formats.filter((f) => f.shape && !f.video).map((f) => `${f.name.toLowerCase()} do ${n.name} ${f.shape}`)).join(', ')
 const sizes = Object.entries(SIZES)
   .map(([k, s]) => `${k} ${s.w}x${s.h}`)
   .join(', ')
@@ -227,7 +227,7 @@ export const tools: Tool[] = [
       rede: z.enum(ids),
       formato: z.string().max(32).describe(formats),
       tipo: z.string().max(60).optional().describe('tipo de post da skill, em minúsculas (ex.: bastidores técnico, projeto grande, post único)'),
-      titulo: z.string().min(1).max(140).describe('nome curto do post, aparece na agenda'),
+      titulo: z.string().min(1).max(140).describe('nome curto do post, aparece na agenda; no Shorts e no vídeo do YouTube é o título do vídeo (até 100 letras)'),
       legenda: z.string().max(10_000).describe('texto do post, sem as hashtags'),
       hashtags: z.array(z.string().max(80)).max(40).describe('sem #'),
       data: day.optional().describe('YYYY-MM-DD; sem data o post fica em "sem data"'),
@@ -316,7 +316,7 @@ export const tools: Tool[] = [
 
   tool(
     'gerar_imagem',
-    `Transforma um HTML seu (capa, card, slide do carrossel) em PNG e anexa no fim da mídia do post. A página roda fechada: sem script, sem rede e sem acesso ao disco, então CSS, fontes e imagens vão inline ou em data:. Manrope (400 a 800) e JetBrains Mono (400, 500 e 700) já estão carregadas. O tamanho sai do formato do post (story vertical, artigo do LinkedIn paisagem, o resto retrato) ou de tamanho: ${sizes}. Desenhe o body exatamente nesse tamanho, sem rolagem.
+    `Transforma um HTML seu (capa, card, slide do carrossel) em PNG e anexa no fim da mídia do post. A página roda fechada: sem script, sem rede e sem acesso ao disco, então CSS, fontes e imagens vão inline ou em data:. Manrope (400 a 800) e JetBrains Mono (400, 500 e 700) já estão carregadas. O tamanho sai do formato do post (${shapes}, o resto retrato) ou de tamanho: ${sizes}. No vídeo do YouTube a imagem é a capa. Desenhe o body exatamente nesse tamanho, sem rolagem.
 Mockup de aparelho: escreva <sg-mockup modelo="celular" cor="roxo" largura="380" style="position:absolute;left:600px;top:420px">HTML da tela</sg-mockup> e o servidor põe o aparelho sem fundo, com o conteúdo encaixado na tela. Modelos: ${about}. largura é em px e a altura sai dela; posicione e gire pelo style (position, left, top, transform, filter:drop-shadow para a sombra), sem width nem height. Na tela vai um destes: HTML filho, desenhado no tamanho da tela do aparelho (o celular tem 393x852); midia="m-xxx.png", uma imagem deste post; ou print="url", uma página deste PC (as mesmas regras do capturar_tela), aberta já no tamanho da tela do aparelho, então o celular pega o layout de celular do app. HTML filho junto com midia ou print fica por cima da imagem. No navegador, endereco="mocha.app" escreve o endereço na barra; sem ele a barra fica vazia (o endereço do print nunca aparece). Até ${MAX} mockups por imagem, ${PRINTS} com print.`,
     {
       id: z.string().max(100),
@@ -326,7 +326,7 @@ Mockup de aparelho: escreva <sg-mockup modelo="celular" cor="roxo" largura="380"
     false,
     async (ctx, a) => {
       const post = await target(ctx, a.id)
-      const s = SIZES[a.tamanho ?? SHAPES[`${post.network}/${post.format}`] ?? 'retrato']
+      const s = SIZES[a.tamanho ?? shape(post.network, post.format)]
       const specs = scan(a.html)
       const html = specs.length ? dress(a.html, specs, await screens(ctx, post, specs)) : a.html
       const r = await render(html, s, (file) => ctx.ops.attach(a.id, file, 'png'))
@@ -348,7 +348,7 @@ Mockup de aparelho: escreva <sg-mockup modelo="celular" cor="roxo" largura="380"
     async (ctx, a) => {
       const href = local(a.url, ctx.app)
       const post = await target(ctx, a.id)
-      const s = SIZES[a.tamanho ?? SHAPES[`${post.network}/${post.format}`] ?? 'retrato']
+      const s = SIZES[a.tamanho ?? shape(post.network, post.format)]
       const k = a.escala ?? 1
       const r = await capture(href, s, k, (file) => ctx.ops.attach(a.id, file, 'png'))
       return { ...out(r), arquivo: r.name, tamanho: `${s.w}x${s.h}`, pagina: `${href} em ${s.w / k}x${s.h / k}`, ...(r.grew ? { formato_novo: 'o feed virou carrossel porque agora tem mais de uma mídia' } : {}) }

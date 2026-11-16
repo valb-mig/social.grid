@@ -126,6 +126,22 @@ test('gerar_imagem desenha o HTML no tamanho do formato e anexa o PNG ao post', 
   assert.deepEqual(await media(v, quadrado), [{ w: 1080, h: 1080, corner: 'ff00ff' }])
 })
 
+test('gerar_imagem faz a capa do vídeo do YouTube em paisagem, as fotos do TikTok em vertical e a comunidade em quadrado', { skip }, async () => {
+  const { v, run, make } = await setup()
+  const cases: [object, number, number][] = [
+    [{ rede: 'youtube', formato: 'video', titulo: 'Vídeo do mocha' }, 1920, 1080],
+    [{ rede: 'tiktok', formato: 'fotos', titulo: 'Fotos do mocha' }, 1080, 1920],
+    [{ rede: 'youtube', formato: 'comunidade', titulo: 'Aviso do mocha' }, 1080, 1080],
+  ]
+  for (const [a, w, h] of cases) {
+    const id = await make(a)
+    const r = await run('gerar_imagem', { id, html: art(w, h) })
+    assert.equal(r.isError, undefined, r.content[0]!.text)
+    assert.equal((JSON.parse(r.content[0]!.text) as { tamanho: string }).tamanho, `${w}x${h}`)
+    assert.deepEqual(await media(v, id), [{ w, h, corner: 'ff00ff' }])
+  }
+})
+
 test('a arte roda fechada: sem script, sem rede, sem arquivo do PC e sem meta refresh', { skip }, async () => {
   const { base, v, run, make } = await setup()
   const hits: string[] = []
@@ -158,10 +174,13 @@ test('a arte roda fechada: sem script, sem rede, sem arquivo do PC e sem meta re
   }
 })
 
-test('gerar_imagem recusa reels, post de outro projeto no chat e HTML gigante, sem abrir o Chrome', async () => {
+test('gerar_imagem recusa reels, vídeo do TikTok e Shorts, post de outro projeto no chat e HTML gigante, sem abrir o Chrome', async () => {
   const { v, ctx, run, make } = await setup()
-  const reels = await make({ formato: 'reels', titulo: 'Reels do mocha' })
-  assert.match((await run('gerar_imagem', { id: reels, html: art(1080, 1920) })).content[0]!.text, /precisa de vídeo/)
+  for (const a of [{ formato: 'reels' }, { rede: 'tiktok', formato: 'video' }, { rede: 'youtube', formato: 'shorts' }]) {
+    const id = await make({ ...a, titulo: `Vídeo do mocha ${a.formato}` })
+    assert.match((await run('gerar_imagem', { id, html: art(1080, 1920) })).content[0]!.text, /precisa de vídeo/)
+    assert.deepEqual((await v.repo.get(id))!.media, [])
+  }
 
   const outro = await make({ projeto: 'editr', titulo: 'Post do editr' }, ctx)
   const r = await run('gerar_imagem', { id: outro, html: art(1080, 1350) })
