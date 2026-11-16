@@ -190,6 +190,19 @@ test('capturar_tela tira o print de uma página do PC depois dos dados carregare
   }
 })
 
+test('capturar_tela com o app parado diz que a página não abriu, em vez de anexar a tela de erro do Chrome', { skip }, async () => {
+  const { v, run, make } = await setup()
+  const srv = createServer()
+  await new Promise<void>((ok) => srv.listen(0, '127.0.0.1', ok))
+  const url = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/`
+  await new Promise((ok) => srv.close(ok))
+  const id = await make()
+  const r = await run('capturar_tela', { id, url })
+  assert.equal(r.isError, true)
+  assert.match(r.content[0]!.text, /a página não abriu \(net::ERR_CONNECTION_REFUSED\); o app está rodando\?/)
+  assert.deepEqual((await v.repo.get(id))!.media, [])
+})
+
 test('capturar_tela só abre página deste PC e recusa o resto antes de abrir o Chrome', async () => {
   const { v, ctx, run, make } = await setup()
   const id = await make()
@@ -211,4 +224,22 @@ test('capturar_tela só abre página deste PC e recusa o resto antes de abrir o 
   assert.match((await run('capturar_tela', { id: outro, url: 'http://localhost:7338/' })).content[0]!.text, /outro projeto/)
   assert.deepEqual((await v.repo.get(id))!.media, [])
   assert.deepEqual((await v.repo.get(outro))!.media, [])
+})
+
+test('capturar_tela abre a página já na largura da escala, mesmo abaixo de 500 px, e o script lê essa largura', { skip }, async () => {
+  const { v, chat, run, make } = await setup()
+  const srv = createServer((_req, res) => {
+    res.setHeader('content-type', 'text/html; charset=utf-8')
+    res.end(`<!doctype html><style>html,body{margin:0;height:100%}</style><body><script>document.body.style.background = innerWidth === 360 ? '#00ff00' : '#ff0000'</script></body>`)
+  })
+  await new Promise<void>((ok) => srv.listen(0, '127.0.0.1', ok))
+  const url = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`
+  try {
+    const id = await make()
+    const r = await run('capturar_tela', { id, url: `${url}/`, escala: 3 }, { ...chat, app: url })
+    assert.match(r.content[0]!.text, /em 360x450/)
+    assert.deepEqual(await media(v, id), [{ w: 1080, h: 1350, corner: '00ff00' }])
+  } finally {
+    srv.close()
+  }
 })
