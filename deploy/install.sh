@@ -69,9 +69,9 @@ main() {
 }
 
 fetch() {
-  local repo="$1" dir="$2" url tmp stage="$2.new"
-  if [ -n "${SOCIAL_GRID_VERSION:-}" ]; then
-    url="https://github.com/$repo/releases/download/v${SOCIAL_GRID_VERSION#v}/social-grid.tar.gz"
+  local repo="$1" dir="$2" pin="${SOCIAL_GRID_VERSION:-}" url tmp stage="$2.new"
+  if [ -n "$pin" ]; then
+    url="https://github.com/$repo/releases/download/v${pin#v}/social-grid.tar.gz"
   else
     url="https://github.com/$repo/releases/latest/download/social-grid.tar.gz"
   fi
@@ -111,7 +111,7 @@ shortcut() {
     printf '[Desktop Entry]\nType=Application\nName=social.grid\n'
     printf 'Comment=Agenda e preparo dos posts dos seus projetos\n'
     printf 'Exec="%s"\n' "$dir/deploy/app.sh"
-    printf 'Icon=social-grid\nCategories=Office;\nStartupWMClass=social-grid\nTerminal=false\n'
+    printf 'Icon=social-grid\nCategories=Office;\nStartupWMClass=chrome-localhost__-social-grid\nTerminal=false\n'
   } > "$apps/social-grid.desktop"
   if command -v update-desktop-database > /dev/null; then
     update-desktop-database -q "$apps" || true
