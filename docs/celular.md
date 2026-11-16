@@ -43,8 +43,8 @@ Cada aviso sai uma vez só. Tocar no aviso abre o post.
 
 Na aba Hoje, o post da vez vem como pacote (um post de hoje que passou da hora sem ser postado continua ali, marcado como atrasado):
 
-- Compartilhar: copia legenda e hashtags e abre a folha de compartilhar do Android com as mídias na ordem. Escolha o Instagram (ou o LinkedIn) e cole a legenda. Enquanto a mídia baixa do PC o botão fica em "Preparando mídia"; se ela não baixar, aparece "Tentar de novo".
+- Compartilhar: copia legenda e hashtags e abre a folha de compartilhar do Android com as mídias na ordem. Escolha o app da rede (Instagram, LinkedIn, TikTok ou YouTube) e cole a legenda. Enquanto a mídia baixa do PC o botão fica em "Preparando mídia"; se ela não baixar, aparece "Tentar de novo".
 - Legenda e Hashtags copiam cada parte.
 - Marcar postado fecha o post.
 
-Aberto no celular, um post pronto vira passo a passo: mídia, legenda, hashtags (e o comentário com o link no LinkedIn) e "Postei". Se a tela bloquear no meio de uma conversa do chat, o app busca o que perdeu quando volta.
+Aberto no celular, um post pronto vira passo a passo: mídia, legenda, hashtags (e o comentário com o link no LinkedIn) e "Postei". No Shorts e no vídeo do YouTube entra antes o título do vídeo, e a legenda vira descrição. Se a tela bloquear no meio de uma conversa do chat, o app busca o que perdeu quando volta.

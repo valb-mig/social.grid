@@ -47,7 +47,9 @@ Seu design ainda mora em print solto no WhatsApp?
 
 - O corpo é a legenda, sem as hashtags (elas entram no pacote na hora de postar).
 - `project` é o nome da pasta do repositório em `~/Projects`, ou `geral`.
-- `network`: `instagram` ou `linkedin`. `format`: `feed`, `carrossel`, `story`, `reels` (Instagram) ou `post`, `artigo` (LinkedIn). Feed com 2 mídias ou mais vira carrossel sozinho.
+- `network`: `instagram`, `linkedin`, `tiktok` ou `youtube`. `format`: `feed`, `carrossel`, `story`, `reels` (Instagram); `post`, `artigo` (LinkedIn); `video`, `fotos` (TikTok); `shorts`, `video`, `comunidade` (YouTube). Feed com 2 mídias ou mais vira carrossel sozinho.
+- No TikTok, `video` leva 1 vídeo e `fotos` só imagens (até 20, o limite de mídia do app). Link na legenda vira aviso, porque no TikTok ele não abre: vai na bio.
+- No YouTube, o `title` do post é o título do vídeo no `shorts` e no `video` (até 100 letras, sem `<` nem `>`) e o corpo é a descrição. `video` leva 1 vídeo e, se quiser, 1 imagem de capa; `comunidade` é texto com até 10 imagens. Mais de 15 hashtags é erro, porque o YouTube ignora todas.
 - `type` (opcional): o tipo de post da skill (`bastidores técnico`, `projeto grande`, `post único`), mostrado nas listas no lugar do formato.
 - `status`: `draft`, `ready` ou `posted`. `date` e `time` podem ser `null` (post sem data).
 - `media` é a ordem das mídias. Tirar um nome da lista não apaga o arquivo.

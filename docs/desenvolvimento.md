@@ -43,12 +43,13 @@ Ficam em `packages/*/test` e `apps/*/test`, com cenários de uso real:
 
 - slots da semana de 16/11 a partir da config e um post agendado ocupando o slot;
 - máquina de status com hashtags demais, carrossel com 1 mídia, LinkedIn longo e link no corpo;
+- TikTok: vídeo só com vídeo, fotos só com imagem, legenda vazia como aviso, link na legenda e o limite de 4000 letras; YouTube: vídeo com capa opcional, título até 100 letras e sem `<>`, 16 hashtags recusadas e comunidade sem texto; config antiga só com Instagram e LinkedIn ganha as redes novas;
 - pacote do carrossel na ordem salva;
 - lembretes: pronto às 11:45, rascunho das 08:00 avisado às 07:45, post das 00:10 avisado às 23:55 da véspera;
 - vault: criar, anexar, mudar a data e reler do disco; frontmatter sem injeção; conflito por `updatedAt`; edições simultâneas; `post.md` sem cada campo e mínimo escrito à mão; feed que vira carrossel e 21ª mídia recusada sem deixar arquivo;
 - vault: excluir rascunho move a pasta com a mídia para `.lixeira`, emite `gone` e a segunda vez é `not_found`; exclusão espera a edição em andamento no mesmo post;
 - watch: edição à mão e pasta nova emitem 1 evento, escrita do próprio app não duplica; exclusão pelo app não emite de novo e pasta apagada à mão emite `gone`;
-- MCP: a lista de ferramentas é fechada e nenhuma exclui post; `criar_post` grava e emite no bus; `anexar_midia` recusa arquivo de fora; no contexto do chat, post de outro projeto, status postado e arquivo de fora do projeto são recusados;
+- MCP: a lista de ferramentas é fechada e nenhuma exclui post; `criar_post` grava e emite no bus e devolve os avisos de TikTok e YouTube; `gerar_imagem` faz a capa do YouTube em paisagem, as fotos do TikTok em vertical e recusa vídeo do TikTok e Shorts; `anexar_midia` recusa arquivo de fora; no contexto do chat, post de outro projeto, status postado e arquivo de fora do projeto são recusados;
 - skills numa HOME temporária, com `../`, nome fora da lista, link simbólico e exclamação seguida de crase recusados;
 - guard (Host, origem, tipo do corpo, WebSocket, login da tailnet), `DELETE` sem `Origin`, de outra origem ou de outra conta da tailnet recusado, inscrição de push e a pílula com o aparelho conectado pela tailnet;
 - WebSocket: post excluído no PC chega como `gone` na segunda conexão (o celular);

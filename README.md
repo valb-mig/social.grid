@@ -2,7 +2,7 @@
 
 # social.grid
 
-Painel pessoal para organizar e preparar os posts dos seus projetos no Instagram e no LinkedIn. Roda no PC, lê os repositórios git de `~/Projects`, mostra a agenda com os horários que você definiu e tem o Claude Code embutido para escrever os posts com as suas skills. No celular abre pela tailnet como app (PWA), avisa antes da hora e entrega mídia, legenda e hashtags prontas para colar. Sem nuvem e sem login.
+Painel pessoal para organizar e preparar os posts dos seus projetos no Instagram, no LinkedIn, no TikTok e no YouTube. Roda no PC, lê os repositórios git de `~/Projects`, mostra a agenda com os horários que você definiu e tem o Claude Code embutido para escrever os posts com as suas skills. No celular abre pela tailnet como app (PWA), avisa antes da hora e entrega mídia, legenda e hashtags prontas para colar. Sem nuvem e sem login.
 
 ## Instalar
 
