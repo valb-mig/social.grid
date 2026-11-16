@@ -29,7 +29,7 @@ await mkdir(v.dir, { recursive: true })
 const b = bus()
 const known = async (id: string) => !!(await v.projects.get(id))
 const o = ops({ repo: v.repo, config: v.cfg.load, bus: b, now, known })
-const ctx: Ctx = { ops: o, repo: v.repo, config: v.cfg.load, projects: v.projects, roots: async () => [await v.cfg.projects(), v.dir], now }
+const ctx: Ctx = { ops: o, repo: v.repo, config: v.cfg.load, projects: v.projects, roots: async () => [await v.cfg.projects(), v.dir], now, app: `http://127.0.0.1:${PORT}` }
 
 const unwatch = await watch(v.dir, b, { post: v.repo.mine, config: v.cfg.mine })
 const p = await push(st)
