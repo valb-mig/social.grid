@@ -63,9 +63,12 @@ main() {
     echo "Para atualizar, rode o mesmo comando do curl de novo."
   fi
   echo
-  echo "Para abrir no celular pela tailnet, rode uma vez:"
-  echo "  tailscale serve --bg --https=$https $port"
-  echo "Depois abra https://<nome-do-pc>.<sua-tailnet>.ts.net:$https/hoje no celular e instale o app."
+  echo "O app se publica sozinho na tailnet, na porta $https. O link e o QR para o celular ficam em Config, Celular."
+  if ! command -v tailscale > /dev/null; then
+    echo "Para o celular, instale o Tailscale: https://tailscale.com/download"
+  elif [[ "$(tailscale debug prefs 2> /dev/null || true)" != *"\"OperatorUser\": \"$USER\""* ]]; then
+    echo "O Tailscale só deixa publicar com sudo. Rode uma vez: sudo tailscale set --operator=$USER"
+  fi
 }
 
 fetch() {
