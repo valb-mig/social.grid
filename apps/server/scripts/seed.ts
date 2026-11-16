@@ -30,8 +30,15 @@ const v = open(real)
 const slides = ['slide-1.jpg', 'slide-2.jpg', 'slide-3.jpg'].map((f) => join(import.meta.dirname, 'seed', f))
 
 await v.cfg.save({
-  nets: { instagram: { on: true, handle: '@valb.dev' }, linkedin: { on: true, handle: 'in/valb-mig' } },
-  tags: { nets: { instagram: ['buildinpublic', 'devbrasil'], linkedin: ['buildinpublic'] }, projects: { 'mocha.app': ['designsystem', 'mcp'] } },
+  nets: { instagram: { on: true, handle: '@valb.dev' }, linkedin: { on: true, handle: 'in/valb-mig' }, tiktok: { on: true, handle: '@valb.dev' }, youtube: { on: true, handle: '@valbdev' } },
+  rules: [
+    { net: 'instagram', format: 'feed', days: [0, 2, 4], times: ['12:00'], on: true },
+    { net: 'instagram', format: 'story', days: [1, 4], times: ['19:00'], on: true },
+    { net: 'linkedin', format: 'post', days: [1, 3], times: ['08:30'], on: true },
+    { net: 'tiktok', format: 'video', days: [2], times: ['20:00'], on: true },
+    { net: 'youtube', format: 'shorts', days: [5], times: ['11:00'], on: true },
+  ],
+  tags: { nets: { instagram: ['buildinpublic', 'devbrasil'], linkedin: ['buildinpublic'], tiktok: ['devtok'], youtube: [] }, projects: { 'mocha.app': ['designsystem', 'mcp'] } },
 })
 
 type Seed = Input & { status: Status; media?: number[]; postedAt?: string }
@@ -67,6 +74,9 @@ const seeds: Seed[] = [
   { project: 'mocha.app', network: 'linkedin', format: 'post', type: 'bastidores técnico', title: 'Por que o blend é HTML puro', caption: 'O design do mocha é HTML puro, sem build. Parece passo atrás, mas é o que deixa qualquer agente ler, editar e reimplementar a tela noutra stack.\n\nTrês motivos, nos comentários eu deixo o repositório.', hashtags: ['webdesign', 'html', 'ia', 'buildinpublic'], comment: 'https://github.com/valb-mig/mocha.app', date: '2026-11-19', time: '08:30', status: 'ready' },
   { project: 'ecoa.desktop', network: 'linkedin', format: 'post', title: 'O que aprendi com áudio no Electron', caption: 'Latência, buffers e um bug que só aparecia às sextas.', hashtags: ['electron', 'audio', 'javascript'], date: '2026-11-24', time: '08:30', status: 'draft' },
   { project: 'mocha.app', network: 'instagram', format: 'reels', title: 'Reels: agente editando o blend ao vivo', caption: 'O Claude mexendo no blend enquanto eu falo o que quero.', hashtags: ['claudecode', 'webdesign', 'ia'], status: 'draft' },
+  { project: 'mocha.app', network: 'tiktok', format: 'fotos', title: 'Fluxo do mocha em 3 fotos', caption: 'Do briefing ao blend em três telas. O link tá na bio.', hashtags: ['devtok', 'webdesign', 'ia', 'claudecode'], date: '2026-11-18', time: '20:00', status: 'ready', media: [0, 1, 2] },
+  { project: 'editr', network: 'youtube', format: 'comunidade', title: 'Enquete do edit.r', caption: 'Qual tela do edit.r vocês querem ver num Shorts primeiro: a aprovação pelo celular ou o histórico das sessões?', hashtags: ['claudecode', 'pwa', 'indiedev'], date: '2026-11-17', time: '18:00', status: 'ready', media: [0] },
+  { project: 'mindblow.app', network: 'youtube', format: 'shorts', title: 'Mapa mental offline em 30 segundos', caption: 'O mindblow anotando no modo avião, do começo ao fim.', hashtags: ['shorts', 'produtividade', 'pwa'], date: '2026-11-21', time: '11:00', status: 'draft' },
 ]
 
 for (const s of seeds) {
