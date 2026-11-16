@@ -65,8 +65,8 @@ git push origin main:release
 ```
 
 - **Versão:** a seguinte à última tag `v*` no patch (`v0.1.3` vira `0.1.4`). Para subir a minor ou a major, ponha a versão nova no `version` do `package.json` da raiz; maior que a última tag, ela vale (`deploy/version.ts`).
-- **Pacote:** `deploy/pack.sh` junta o código do servidor e dos pacotes, o web já compilado e o lockfile, sem `node_modules` nem testes, com a versão no arquivo `VERSION`. Fica em `release/social-grid.tar.gz`.
-- **Instalador:** `deploy/install.sh` rodado pelo `curl` baixa a release para `~/.local/opt/social-grid` (ou `SOCIAL_GRID_HOME`), instala só as dependências de produção do servidor, troca a pasta e reinicia o serviço. Rodado de dentro de um clone, compila e instala o próprio clone. Nos dois casos põe o ícone no tema `hicolor` do usuário e o atalho `social-grid.desktop`, que abre o `deploy/app.sh` com a classe `social-grid`.
+- **Pacote:** `deploy/pack.sh` junta o código do servidor e dos pacotes, o web já compilado e o lockfile, sem `node_modules` nem testes, com a versão no arquivo `VERSION`. Fica em `release/social-grid.tar.gz`, ao lado de uma cópia do `install.sh` com a versão fixada, que é a que vai para a release: o `install.sh` de uma release sempre instala o pacote da mesma release, mesmo que o `latest` do GitHub ainda aponte para a anterior logo depois de publicar.
+- **Instalador:** `deploy/install.sh` rodado pelo `curl` baixa a release para `~/.local/opt/social-grid` (ou `SOCIAL_GRID_HOME`), instala só as dependências de produção do servidor, troca a pasta e reinicia o serviço. Rodado de dentro de um clone, compila e instala o próprio clone. Nos dois casos põe o ícone no tema `hicolor` do usuário e o atalho `social-grid.desktop`, que abre o `deploy/app.sh`: o Chrome em modo app, com um perfil próprio (`social-grid`). No Wayland o Chrome ignora o `--class` e monta o id da janela com o host e o perfil (`chrome-localhost__-social-grid`); é esse id que vai no `StartupWMClass`, para a barra juntar a janela ao ícone.
 - **Falha:** se o workflow quebrar depois de criar a tag, ele apaga a release pela metade e a tag, e a versão não fica pulada.
 
 ## Padrões do código

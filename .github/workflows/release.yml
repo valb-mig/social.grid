@@ -69,7 +69,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v$version" release/social-grid.tar.gz deploy/install.sh \
+          gh release create "v$version" release/social-grid.tar.gz release/install.sh \
             --verify-tag --latest --title "social.grid $version" --notes-file release/notas.md
 
       - name: Desfazer a versão

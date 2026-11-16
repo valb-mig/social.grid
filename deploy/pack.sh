@@ -17,5 +17,7 @@ tar -C "$DIR" --exclude=node_modules --exclude=test --exclude='*.tsbuildinfo' -c
   tar -C "$STAGE" -xf -
 node -p 'require("./package.json").version' > "$STAGE/VERSION"
 tar -C "$OUT" -czf "$OUT/social-grid.tar.gz" social-grid
+sed "s/pin=\"\${SOCIAL_GRID_VERSION:-}\"/pin=\"\${SOCIAL_GRID_VERSION:-$(<"$STAGE/VERSION")}\"/" deploy/install.sh > "$OUT/install.sh"
+cmp -s deploy/install.sh "$OUT/install.sh" && { echo "Não achei onde fixar a versão no install.sh." >&2; exit 1; }
 echo "$OUT/social-grid.tar.gz $(<"$STAGE/VERSION")"
 rm -rf "$STAGE"
