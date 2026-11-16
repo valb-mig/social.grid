@@ -66,11 +66,12 @@ Enviar uma mensagem só põe na fila e responde 202; a resposta sai pelo WebSock
 - O que o chat não pode: escrever ou apagar arquivo, rodar shell ou subagente, carregar hooks, env, skills ou CLAUDE.md do repositório, ler `.env` e afins (nem pelo `Grep` sem caminho), marcar post como postado, mexer em post de outro projeto, rodar git num repositório que configura programa externo.
 - As skills editadas pela tela Skills não aceitam frontmatter novo nem a sequência exclamação mais crase, que no Claude Code do terminal rodaria um comando ao abrir a skill.
 - O MCP stdio do terminal não tem essas travas de conversa: ele roda com a confiança do Claude Code de quem o registrou.
+- Publicar na tailnet é decisão do PC: `POST /api/link` só aceita pedido local, sem cabeçalho de proxy. Pela tailnet responde 403, então o celular não desliga o próprio acesso nem publica de fora. O `PUT /api/config` não muda `phone.link`. O app só escreve no serve a porta dele, e nunca por cima de outro destino.
 
 ## Segurança
 
 - Bind só em `127.0.0.1`. O guard (`guard.ts`) é uma função pura `allow(pedido, política)` chamada num `onRequest` global, que cobre a API, os arquivos do app e o upgrade do WebSocket, pela rota casada.
-- Host precisa ser o local (`127.0.0.1:7338`, `localhost:7338`) ou o nome da tailnet com a porta do serve. Pela tailnet, o `Tailscale-User-Login` precisa ser o dono do nó (lido de `tailscale status --json` no boot e a cada minuto, porque o Tailscale pode subir depois ou trocar de perfil).
+- Host precisa ser o local (`127.0.0.1:7338`, `localhost:7338`) ou o nome da tailnet com a porta do serve. Pela tailnet, o `Tailscale-User-Login` precisa ser o dono do nó (lido de `tailscale status --json` no boot, a cada minuto e logo depois de publicar, porque o Tailscale pode subir depois ou trocar de perfil).
 - Métodos que mudam algo exigem `Origin` igual ao Host (ausente ou `null` é recusado) e `Content-Type: application/json`; multipart só na rota de upload. Vale também para `DELETE /api/posts/:id`, que o app manda com corpo `{}`. Nenhum GET tem efeito colateral e não existe CORS.
 - Respostas com CSP (`frame-ancestors 'none'`), `X-Frame-Options: DENY` e `nosniff`. Ícones de projeto saem com CSP `sandbox`.
 - Upload detecta o tipo pelos bytes, gera o nome no servidor, recusa SVG e HTML e grava em streaming com limite de 100 MB.

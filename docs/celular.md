@@ -4,19 +4,26 @@ O servidor escuta só em `127.0.0.1`. O celular chega pelo `tailscale serve`, qu
 
 ## Publicar na tailnet
 
-No PC, uma vez:
+O app publica sozinho. Ao subir (e a cada minuto, se o Tailscale ainda não estava de pé), ele roda `tailscale serve --bg --https=8443 7338`, desde que:
 
-```sh
-tailscale serve --bg --https=8443 7338
-```
+- o Tailscale esteja rodando no PC;
+- o MagicDNS e os certificados HTTPS estejam ligados no painel de DNS da tailnet;
+- o usuário do PC seja operator do Tailscale. Se não for, o Tailscale pede sudo, e Config, Celular mostra o comando para rodar uma vez: `sudo tailscale set --operator=$USER`;
+- a porta 8443 da tailnet esteja livre ou já leve ao app. Se ela levar a outro serviço, o app não sobrescreve: mostra o que está lá e espera você liberar a porta ou trocar `SOCIAL_GRID_SERVE_PORT`.
 
-O endereço fica `https://<nome-do-pc>.<sua-tailnet>.ts.net:8443`. O servidor aceita esse nome sozinho (lido de `tailscale status --json`) e só atende o dono do nó: o pedido precisa chegar com o `Tailscale-User-Login` da sua conta. Para liberar outra conta, use `SOCIAL_GRID_LOGINS=conta@github,outra@github`. Se o serve usar outra porta, defina `SOCIAL_GRID_SERVE_PORT`. Com o celular conectado, a pílula do topo no PC mostra o nome dele na tailnet.
+Config, Celular mostra o estado, o link com botão de copiar, o QR para a câmera do celular, os celulares da sua conta na tailnet (online ou offline) e, quando falta algo, o passo com o comando ou o link exato. No PC, a pílula do topo abre o mesmo QR.
 
-Se você tem mais de um perfil no Tailscale, o serve e o nome valem para o perfil ativo. O servidor relê o nome a cada minuto.
+O endereço fica `https://<nome-do-pc>.<sua-tailnet>.ts.net:8443`. O servidor aceita esse nome sozinho (lido de `tailscale status --json`) e só atende o dono do nó: o pedido precisa chegar com o `Tailscale-User-Login` da sua conta. Para liberar outra conta, use `SOCIAL_GRID_LOGINS=conta@github,outra@github`. Com o celular conectado, a pílula do topo no PC mostra o nome dele na tailnet.
+
+Para desligar, use o botão "Publicar na tailnet" em Config, Celular. Ele tira só a porta do app do serve (`tailscale serve --https=8443 off`) e grava a escolha na config, para o app não publicar de novo ao subir. Só o PC liga ou desliga: pela tailnet o botão aparece travado e a API responde 403.
+
+Plano B, na mão: `tailscale serve --bg --https=8443 7338`.
+
+Se você tem mais de um perfil no Tailscale, o serve e o nome valem para o perfil ativo. O servidor relê o nome a cada minuto e na hora em que publica.
 
 ## Instalar o app
 
-1. Com o Tailscale ligado no celular, abra `https://<nome-do-pc>.<sua-tailnet>.ts.net:8443/hoje` no Chrome.
+1. Com o Tailscale ligado no celular, aponte a câmera para o QR de Config, Celular (ou abra `https://<nome-do-pc>.<sua-tailnet>.ts.net:8443/hoje` no Chrome).
 2. Menu, "Instalar app" (ou "Adicionar à tela inicial").
 3. Abra o app instalado. A aba Hoje mostra o próximo post.
 
