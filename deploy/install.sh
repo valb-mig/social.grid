@@ -69,7 +69,7 @@ main() {
 }
 
 fetch() {
-  local repo="$1" dir="$2" url tmp
+  local repo="$1" dir="$2" url tmp stage="$2.new"
   if [ -n "${SOCIAL_GRID_VERSION:-}" ]; then
     url="https://github.com/$repo/releases/download/v${SOCIAL_GRID_VERSION#v}/social-grid.tar.gz"
   else
@@ -80,18 +80,16 @@ fetch() {
 
   say "Baixando $url"
   curl -fSL --progress-bar "$url" -o "$tmp/social-grid.tar.gz" || die "não consegui baixar a release"
-  mkdir -p "$tmp/app"
-  tar -xzf "$tmp/social-grid.tar.gz" -C "$tmp/app" --strip-components=1
-  [ -f "$tmp/app/VERSION" ] || die "o pacote baixado não é uma release do social.grid"
+  rm -rf "$stage" "$dir.old"
+  mkdir -p "$stage"
+  tar -xzf "$tmp/social-grid.tar.gz" -C "$stage" --strip-components=1
+  [ -f "$stage/VERSION" ] || die "o pacote baixado não é uma release do social.grid"
 
-  say "Instalando as dependências da versão $(<"$tmp/app/VERSION")"
-  (cd "$tmp/app" && pn install --prod --frozen-lockfile --config.confirmModulesPurge=false --filter '@social-grid/server...')
+  say "Instalando as dependências da versão $(<"$stage/VERSION")"
+  (cd "$stage" && pn install --prod --frozen-lockfile --config.confirmModulesPurge=false --filter '@social-grid/server...')
 
-  mkdir -p "$(dirname "$dir")"
-  rm -rf "$dir.new" "$dir.old"
-  mv "$tmp/app" "$dir.new"
   [ ! -e "$dir" ] || mv "$dir" "$dir.old"
-  mv "$dir.new" "$dir"
+  mv "$stage" "$dir"
 }
 
 shortcut() {
