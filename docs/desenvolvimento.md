@@ -25,6 +25,7 @@ Em dev o servidor roda com `SOCIAL_GRID_DEV=1`, que libera o Host e a origem do 
 | `SOCIAL_GRID_PORT` | `7338` |
 | `SOCIAL_GRID_SERVE_PORT` | `8443` (porta https do `tailscale serve`) |
 | `SOCIAL_GRID_TAILSCALE` | `tailscale` (o binário que o app chama) |
+| `SOCIAL_GRID_CHROME` | o primeiro de `google-chrome-stable`, `google-chrome`, `chromium` e `chromium-browser` no PATH (o `gerar_imagem` usa) |
 | `SOCIAL_GRID_LOGINS` | o dono do nó do Tailscale |
 
 ## Vault de exemplo
@@ -55,6 +56,7 @@ Ficam em `packages/*/test` e `apps/*/test`, com cenários de uso real:
 - rotas com `fastify.inject`: excluir move a pasta para `.lixeira`, emite `gone`, libera o slot e o post some da API; listar por intervalo, upload com mime proibido e SVG disfarçado, imagem do chat;
 - política do chat: leitura fora do projeto, a lista de segredos, escrita, shell, WebFetch fora da lista, git com opções perigosas e repositório com filtro no `.git/config`;
 - chat com o Claude Code de verdade contra uma API falsa local (`apps/server/test/claude.ts`), numa HOME temporária: hook do `.claude/settings.json` do repositório não roda, `Grep` sem caminho não devolve `.env`, `Read` do `.envrc` é negado, erro sem login em português, e conversa que reabre depois do servidor reiniciar com epoch novo, sem perder mensagem nem o cartão do post;
+- gerar_imagem com o Chrome de verdade (pulado sem Chrome): PNG no tamanho do formato (feed, story e `quadrado`), com o canto na cor do fundo; HTML com script, `meta refresh` para um arquivo do PC, CSS, imagem e iframe de um servidor local e de `file://` sai com o fundo intacto e o servidor sem nenhum acesso; reels, post de outro projeto no chat e HTML gigante recusados sem abrir o Chrome; sem Chrome, erro claro;
 - link da tailnet, com o `tailscale status` e o `serve status` reais (anonimizados) e um exec falso: a 8443 já no app não escreve nada, 8443 livre publica com os args exatos e libera o celular no guard na hora, 8443 de outro serviço não é sobrescrita, falta de operator vira o comando com o usuário, HTTPS ou MagicDNS desligados não tentam publicar, Tailscale ausente ou parado, só os celulares do dono, boot que publica uma vez (e espera o Tailscale subir), `POST /api/link` pela tailnet 403 e o `PUT /api/config` sem poder mexer no link;
 - app web: a store ignora evento de conversa não aberta, recarrega tudo quando o epoch muda e tira o post ao receber `gone` (ou quando o GET dele volta 404).
 
