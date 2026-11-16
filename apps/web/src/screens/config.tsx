@@ -73,7 +73,7 @@ export function Settings() {
 function Pane({ title, sub, side, children }: { title: string; sub: string; side?: ReactNode; children: ReactNode }) {
   const mobile = useMobile()
   return (
-    <section className={`flex min-h-0 flex-col gap-6 ${mobile ? '' : 'card overflow-y-auto p-8 scroll-none'}`}>
+    <section className={`flex min-h-0 flex-col gap-6 *:flex-none ${mobile ? '' : 'card overflow-y-auto p-8 scroll-none'}`}>
       <div className={`flex gap-4 ${mobile ? 'flex-col' : 'items-end'}`}>
         <div>
           <h1 className="text-[26px] font-bold tracking-[-0.02em]">{title}</h1>
