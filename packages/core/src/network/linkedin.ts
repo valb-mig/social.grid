@@ -7,7 +7,7 @@ export const linkedin: Net = {
   name: 'LinkedIn',
   formats: [
     { id: 'post', name: 'Post', hint: 'link no primeiro comentário', min: 0, max: 20 },
-    { id: 'artigo', name: 'Artigo', hint: 'texto longo', min: 0, max: 1 },
+    { id: 'artigo', name: 'Artigo', hint: 'texto longo', min: 0, max: 1, shape: 'paisagem' },
   ],
   max: 3000,
   hook: 210,

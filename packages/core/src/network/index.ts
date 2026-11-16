@@ -1,9 +1,11 @@
 import { fail } from '../fault.ts'
 import { instagram } from './instagram.ts'
 import { linkedin } from './linkedin.ts'
-import type { Format, Net } from './net.ts'
+import { tiktok } from './tiktok.ts'
+import { youtube } from './youtube.ts'
+import type { Format, Net, Shape } from './net.ts'
 
-export const nets: readonly Net[] = [instagram, linkedin]
+export const nets: readonly Net[] = [instagram, linkedin, tiktok, youtube]
 
 export const ids = nets.map((n) => n.id) as [string, ...string[]]
 
@@ -19,6 +21,8 @@ export const slot = (net: string, id: string): string => {
   const f = find(net)?.formats.find((x) => x.id === id)
   return f?.under ?? id
 }
+
+export const shape = (net: string, id: string): Shape => find(net)?.formats.find((x) => x.id === id)?.shape ?? 'retrato'
 
 export const rules = (net: string): Format[] => find(net)?.formats.filter((f) => !f.under) ?? []
 

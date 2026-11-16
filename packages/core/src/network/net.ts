@@ -2,6 +2,7 @@ import { kind } from '../media.ts'
 import { hashes, tags, type Post } from '../post/post.ts'
 
 export type Level = 'error' | 'warn' | 'ok'
+export type Shape = 'retrato' | 'quadrado' | 'vertical' | 'paisagem'
 export type Issue = { level: Level; code: string; text: string }
 
 export type Format = {
@@ -11,6 +12,8 @@ export type Format = {
   min: number
   max: number
   video?: boolean
+  image?: boolean
+  shape?: Shape
   under?: string
   more?: string
 }
@@ -66,6 +69,7 @@ export function size(net: Net, post: Post, f: Format): Issue {
   if (n < f.min) return issue('error', 'media_min', f.min === 1 && n === 0 ? `${f.name} precisa de mídia` : `${what}`)
   if (n > f.max) return issue('error', 'media_max', what)
   if (f.video && post.media.some((m) => kind(m) !== 'video')) return issue('error', 'media_video', `${f.name} aceita só vídeo`)
+  if (f.image && post.media.some((m) => kind(m) !== 'image')) return issue('error', 'media_image', `${f.name} aceita só imagem`)
   return issue('ok', 'media', f.max === 0 ? `${net.name} sem mídia` : what)
 }
 
@@ -87,6 +91,13 @@ export function many(net: Net, post: Post): Issue {
   if (n > net.cap) return issue('error', 'tags_max', `${n} hashtags: o limite é ${net.cap}`)
   if (n < lo || n > hi) return issue('warn', 'tags_ideal', `${n} ${n === 1 ? 'hashtag' : 'hashtags'}, ideal ${lo} a ${hi}`)
   return issue('ok', 'tags', `${n} hashtags, dentro do ideal`)
+}
+
+export function heading(post: Post, max: number): Issue {
+  const n = len(post.title)
+  if (n > max) return issue('error', 'title', `Título em ${num(n)} de ${num(max)}: passou do limite`)
+  if (/[<>]/.test(post.title)) return issue('error', 'title_char', 'Título não pode ter < nem >')
+  return issue('ok', 'title', `Título em ${num(n)} de ${num(max)}`)
 }
 
 export function known(net: Net, post: Post): Format | Issue {

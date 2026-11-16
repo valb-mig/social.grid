@@ -155,9 +155,12 @@ test('post.md mínimo escrito à mão vira rascunho do Instagram e entra na list
 })
 
 test('rede e formato desconhecidos voltam ao padrão da rede em vez de quebrar a validação', () => {
-  const p = decode('x-abcd', '---\nnetwork: tiktok\nformat: dueto\ntitle: x\n---\n', new Date())
+  const p = decode('x-abcd', '---\nnetwork: mastodon\nformat: toot\ntitle: x\n---\n', new Date())
   assert.equal(p?.network, 'instagram')
   assert.equal(p?.format, 'feed')
+  const t = decode('t-abcd', '---\nnetwork: tiktok\nformat: dueto\ntitle: t\n---\n', new Date())
+  assert.equal(t?.network, 'tiktok')
+  assert.equal(t?.format, 'video')
   const q = decode('y-abcd', '---\nnetwork: linkedin\nformat: reels\ntitle: y\n---\n', new Date())
   assert.equal(q?.format, 'post')
 })

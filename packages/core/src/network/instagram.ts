@@ -6,8 +6,8 @@ export const instagram: Net = {
   formats: [
     { id: 'feed', name: 'Feed', hint: 'post único; 2+ mídias vira carrossel', min: 1, max: 1, more: 'carrossel' },
     { id: 'carrossel', name: 'Carrossel', hint: '2 a 10 mídias', min: 2, max: 10, under: 'feed' },
-    { id: 'story', name: 'Story', hint: '1 mídia vertical', min: 1, max: 1 },
-    { id: 'reels', name: 'Reels', hint: 'vídeo até 90 s', min: 1, max: 1, video: true },
+    { id: 'story', name: 'Story', hint: '1 mídia vertical', min: 1, max: 1, shape: 'vertical' },
+    { id: 'reels', name: 'Reels', hint: 'vídeo até 90 s', min: 1, max: 1, video: true, shape: 'vertical' },
   ],
   max: 2200,
   hook: 125,
