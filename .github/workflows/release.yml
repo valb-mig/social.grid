@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    branches: [release]
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PUBLISH: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm build
+
+      - name: Versão
+        if: env.PUBLISH == 'true'
+        run: node deploy/version.ts >> "$GITHUB_ENV"
+
+      - name: Pacote
+        run: deploy/pack.sh
+
+      - name: Notas
+        if: env.PUBLISH == 'true'
+        run: |
+          prev="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+          {
+            echo '## Instalar'
+            echo
+            echo '```sh'
+            echo "curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/latest/download/install.sh | bash"
+            echo '```'
+            echo
+            echo 'Precisa do Node 26 e do systemd. Instala em `~/.local/opt/social-grid`, sobe o serviço de usuário e põe o social.grid no menu de apps, com o ícone. Rodar de novo atualiza.'
+            echo
+            echo '## Mudanças'
+            echo
+            git log --no-merges --format='- %s' ${prev:+"$prev"..}HEAD
+          } > release/notas.md
+          cat release/notas.md
+
+      - name: Tag
+        if: env.PUBLISH == 'true'
+        run: |
+          git tag "v$version"
+          git push origin "v$version"
+
+      - name: Publicar
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$version" release/social-grid.tar.gz deploy/install.sh \
+            --verify-tag --latest --title "social.grid $version" --notes-file release/notas.md
+
+      - name: Desfazer a versão
+        if: failure() && env.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete "v$version" --cleanup-tag --yes || git push origin ":refs/tags/v$version" || true
