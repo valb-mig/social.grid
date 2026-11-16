@@ -317,6 +317,10 @@
     left: 19px;
     background: var(--color-on-accent);
   }
+  .tg:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
   .lbl {
     display: flex;
     align-items: baseline;

@@ -2,6 +2,8 @@ import { Calendar, Clock, Folder, SlidersVertical, Sparkles } from 'lucide-react
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'wouter'
 import { useStore } from '../lib/store.ts'
+import { Open } from './link.tsx'
+import { Pop } from './pop.tsx'
 import { Brand } from './ui.tsx'
 
 const QUERY = '(max-width: 767px)'
@@ -20,11 +22,13 @@ export function useMobile() {
 function Live() {
   const live = useStore((s) => s.live)
   const peers = useStore((s) => s.peers)
+  const [open, setOpen] = useState(false)
   const text = !live ? 'offline' : peers.length > 1 ? `${peers[0]} +${peers.length - 1}` : (peers[0] ?? 'só este PC')
-  return (
-    <span
-      className="flex h-9 max-w-[170px] items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-bold text-text-muted"
-      title={live ? (peers.length ? `Conectado: ${peers.join(', ')}` : 'Nenhum outro aparelho conectado') : 'Sem conexão com o servidor'}
+  const pill = (
+    <button
+      type="button"
+      className="flex h-9 max-w-[170px] items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-[12.5px] font-bold text-text-muted hover:text-text"
+      title={live ? (peers.length ? `Conectado: ${peers.join(', ')}. Abrir no celular` : 'Abrir no celular') : 'Sem conexão com o servidor'}
     >
       <span
         className="size-[7px] flex-none rounded-full"
@@ -34,7 +38,12 @@ function Live() {
         }}
       />
       <span className="truncate">{text}</span>
-    </span>
+    </button>
+  )
+  return (
+    <Pop open={open} set={setOpen} title="Abrir no celular" trigger={pill} width={360} align="end">
+      {open && <Open done={() => setOpen(false)} />}
+    </Pop>
   )
 }
 

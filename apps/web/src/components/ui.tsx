@@ -13,8 +13,8 @@ export function St({ status, className = '' }: { status: Status; className?: str
 
 export const statusName = (s: Status) => NAMES[s]
 
-export function Toggle({ on, set, label }: { on: boolean; set: (v: boolean) => void; label?: string }) {
-  return <button type="button" role="switch" aria-checked={on} aria-label={label} className={`tg ${on ? 'on' : ''}`} onClick={() => set(!on)} />
+export function Toggle({ on, set, label, disabled = false }: { on: boolean; set: (v: boolean) => void; label?: string; disabled?: boolean }) {
+  return <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} className={`tg ${on ? 'on' : ''}`} onClick={() => set(!on)} />
 }
 
 export function Card({ className = '', children }: { className?: string; children: ReactNode }) {

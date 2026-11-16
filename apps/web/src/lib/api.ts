@@ -10,6 +10,23 @@ export type Row = Project & { stats: Stats }
 export type Settings = { config: Config; root: string; vault: string }
 export type Entry = { kind: 'skill' | 'agent'; name: string; about: string; files: string[]; missing: boolean }
 export type Doc = { kind: 'skill' | 'agent'; name: string; file: string; path: string; front: string; body: string }
+export type Todo = { id: string; text: string; cmd?: string; links?: { label: string; href: string }[] }
+export type Phone = { name: string; os: string; online: boolean }
+export type Link = {
+  tailscale: 'missing' | 'stopped' | 'running'
+  login: string | null
+  dns: boolean
+  https: boolean
+  serve: number
+  port: number
+  state: 'on' | 'off' | 'busy'
+  target: string | null
+  url: string | null
+  phones: Phone[]
+  todo: Todo[]
+  want: boolean
+  local: boolean
+}
 
 export class ApiError extends Error {
   status: number
@@ -65,6 +82,8 @@ export const api = {
   subscribe: (sub: PushSubscriptionJSON) => call<{ count: number }>('POST', '/api/push/subscribe', { sub }),
   unsubscribe: (endpoint: string) => call<{ count: number }>('POST', '/api/push/unsubscribe', { endpoint }),
   test: () => call<{ ok: true }>('POST', '/api/push/test', {}),
+  link: () => call<Link>('GET', '/api/link'),
+  publish: (on: boolean) => call<Link>('POST', '/api/link', { on }),
   chats: () => call<Session[]>('GET', '/api/chat'),
   unchat: (id: string) => call<{ ok: true }>('DELETE', `/api/chat/${enc(id)}`, {}),
   chat: (project: string, text: string, images: string[] = []) => call<Session>('POST', '/api/chat', { project, text, ...(images.length ? { images } : {}) }),

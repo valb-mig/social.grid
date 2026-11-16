@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'wouter'
 import { Combo, type Choice } from '../components/combo.tsx'
 import { Hour } from '../components/hour.tsx'
+import { Access } from '../components/link.tsx'
 import { Md } from '../components/md.tsx'
 import { Pick } from '../components/pick.tsx'
 import { useMobile } from '../components/shell.tsx'
@@ -571,6 +572,7 @@ function Skills() {
 }
 
 function Celular() {
+  const mobile = useMobile()
   const [state, setState] = useState<PushState | null>(null)
   const [busy, setBusy] = useState(false)
   const fail = useStore((s) => s.fail)
@@ -594,7 +596,8 @@ function Celular() {
     on: 'Este aparelho recebe os avisos.',
   }
   return (
-    <Pane title="Celular" sub="Os avisos chegam pelo Web Push, com o app instalado no celular pela tailnet.">
+    <Pane title="Celular" sub="O app se publica sozinho na tailnet. No celular, ele vira app e recebe os avisos pelo Web Push.">
+      <Access qr={!mobile} />
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-2 px-5 py-4">
         <div className="flex items-center gap-3">
           <Bell size={18} className="text-text-muted" />
@@ -619,12 +622,9 @@ function Celular() {
       </div>
       <Alerts />
       <div className="flex flex-col gap-2 rounded-xl border border-dashed border-border-strong px-5 py-4 text-[13.5px] leading-normal text-text-muted">
-        <b className="text-text">Instalar no celular</b>
-        <p>
-          1. No PC, publique a porta na tailnet: <code className="rounded-md bg-surface-3 px-1.5 font-mono text-[12.5px] text-text">tailscale serve --bg --https=8443 7338</code>
-        </p>
-        <p>2. No celular, com o Tailscale ligado, abra o endereço https do PC na porta 8443 e escolha "Instalar app" ou "Adicionar à tela inicial".</p>
-        <p>3. Abra o app instalado e toque em "Inscrever este aparelho".</p>
+        <b className="text-text">Depois de publicado</b>
+        <p>1. No celular, com o Tailscale ligado, aponte a câmera para o QR (ou abra o link) e escolha "Instalar app" ou "Adicionar à tela inicial".</p>
+        <p>2. Abra o app instalado e toque em "Inscrever este aparelho".</p>
       </div>
     </Pane>
   )
