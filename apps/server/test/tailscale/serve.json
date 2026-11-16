@@ -1,0 +1,56 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    },
+    "7341": {
+      "HTTPS": true
+    },
+    "7342": {
+      "HTTPS": true
+    },
+    "80": {
+      "HTTP": true
+    },
+    "8443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "pc.tail1234.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7337"
+        }
+      }
+    },
+    "pc.tail1234.ts.net:7341": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7341"
+        }
+      }
+    },
+    "pc.tail1234.ts.net:7342": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7342"
+        }
+      }
+    },
+    "pc.tail1234.ts.net:80": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7337"
+        }
+      }
+    },
+    "pc.tail1234.ts.net:8443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7338"
+        }
+      }
+    }
+  }
+}

@@ -10,6 +10,7 @@ import { socket } from '../ws.ts'
 import { chat } from './chat.ts'
 import { config } from './config.ts'
 import type { Deps } from './deps.ts'
+import { link } from './link.ts'
 import { posts } from './posts.ts'
 import { projects } from './projects.ts'
 import { push } from './push.ts'
@@ -55,6 +56,7 @@ export async function build(d: Deps): Promise<FastifyInstance> {
   config(app, d)
   skills(app, d)
   push(app, d)
+  link(app, d)
   chat(app, d)
   socket(app, d.room, d.bus, d.who)
 

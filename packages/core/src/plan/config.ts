@@ -43,6 +43,7 @@ export const schema = z.object({
     draft: z.boolean(),
     at: hm,
   }),
+  phone: z.object({ link: z.boolean() }),
 })
 
 export type Config = z.infer<typeof schema>
@@ -64,6 +65,7 @@ export function defaults(): Config {
     skills: ['instagram-post-writer', 'linkedin-post-writer'],
     agents: ['social-posts'],
     push: { ready: true, before: 15, draft: true, at: '09:00' },
+    phone: { link: true },
   }
 }
 
@@ -79,6 +81,7 @@ export function merge(raw: unknown): unknown {
     nets: { ...d.nets, ...obj(r.nets) },
     tags: { nets: { ...d.tags.nets, ...obj(tags.nets) }, projects: obj(tags.projects) },
     push: { ...d.push, ...obj(r.push) },
+    phone: { ...d.phone, ...obj(r.phone) },
   }
 }
 

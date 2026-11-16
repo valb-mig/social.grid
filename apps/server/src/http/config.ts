@@ -17,7 +17,8 @@ export function config(app: FastifyInstance, d: Deps) {
 
   app.put('/api/config', async (req) => {
     writes()
-    const cfg = await d.cfg.save(req.body)
+    const cur = await d.cfg.load()
+    const cfg = await d.cfg.save({ ...(req.body && typeof req.body === 'object' ? req.body : {}), phone: cur.phone })
     d.bus.emit('config', {})
     return { config: cfg, root: await d.cfg.projects(), vault }
   })

@@ -1,0 +1,256 @@
+{
+  "Version": "1.102.5",
+  "TUN": true,
+  "BackendState": "Running",
+  "HaveNodeKey": true,
+  "AuthURL": "",
+  "TailscaleIPs": [
+    "100.107.7.67",
+    "fd7a:115c:a1e0::a12f:744"
+  ],
+  "Self": {
+    "ID": "n1CNTRL",
+    "PublicKey": "nodekey:0000000000000000000000000000000000000000000000000000000000000001",
+    "HostName": "pc",
+    "DNSName": "pc.tail1234.ts.net.",
+    "OS": "linux",
+    "UserID": 145052051553183,
+    "TailscaleIPs": [
+      "100.107.7.67",
+      "fd7a:115c:a1e0::1"
+    ],
+    "AllowedIPs": [
+      "100.107.7.67/32",
+      "fd7a:115c:a1e0::1/128"
+    ],
+    "Addrs": [
+      "192.168.7.40:41641"
+    ],
+    "CurAddr": "",
+    "Relay": "sao",
+    "PeerRelay": "",
+    "RxBytes": 0,
+    "TxBytes": 0,
+    "Created": "2026-11-05T21:19:40.005906337Z",
+    "LastWrite": "0001-01-01T00:00:00Z",
+    "LastSeen": "0001-01-01T00:00:00Z",
+    "LastHandshake": "0001-01-01T00:00:00Z",
+    "Online": true,
+    "ExitNode": false,
+    "ExitNodeOption": false,
+    "Active": false,
+    "PeerAPIURL": [
+      "http://100.107.7.67:64318"
+    ],
+    "TaildropTarget": 0,
+    "NoFileSharingReason": "",
+    "InNetworkMap": true,
+    "InMagicSock": false,
+    "InEngine": false,
+    "KeyExpiry": "2027-05-04T21:19:40Z",
+    "Capabilities": [
+      "funnel",
+      "https",
+      "https://tailscale.com/cap/funnel-ports?ports=443,8443,10000",
+      "https://tailscale.com/cap/is-admin",
+      "https://tailscale.com/cap/is-owner"
+    ],
+    "CapMap": {
+      "funnel": null,
+      "https": null,
+      "https://tailscale.com/cap/funnel-ports?ports=443,8443,10000": null
+    }
+  },
+  "Health": [],
+  "MagicDNSSuffix": "tail1234.ts.net",
+  "CurrentTailnet": {
+    "Name": "valb.github",
+    "MagicDNSSuffix": "tail1234.ts.net",
+    "MagicDNSEnabled": true
+  },
+  "CertDomains": [
+    "pc.tail1234.ts.net"
+  ],
+  "ExtraRecords": null,
+  "Peer": {
+    "nodekey:0000000000000000000000000000000000000000000000000000000000000002": {
+      "ID": "n2CNTRL",
+      "PublicKey": "nodekey:0000000000000000000000000000000000000000000000000000000000000002",
+      "HostName": "arch",
+      "DNSName": "arch.tail1234.ts.net.",
+      "OS": "linux",
+      "UserID": 145052051553183,
+      "TailscaleIPs": [
+        "100.80.1.2",
+        "fd7a:115c:a1e0::2"
+      ],
+      "AllowedIPs": [
+        "100.80.1.2/32",
+        "fd7a:115c:a1e0::2/128"
+      ],
+      "Addrs": [
+        "192.168.7.40:41641"
+      ],
+      "CurAddr": "",
+      "Relay": "sao",
+      "PeerRelay": "",
+      "RxBytes": 0,
+      "TxBytes": 0,
+      "Created": "2026-11-05T21:19:40.005906337Z",
+      "LastWrite": "0001-01-01T00:00:00Z",
+      "LastSeen": "2026-11-12T22:10:00Z",
+      "LastHandshake": "0001-01-01T00:00:00Z",
+      "Online": false,
+      "ExitNode": false,
+      "ExitNodeOption": false,
+      "Active": false,
+      "PeerAPIURL": [
+        "http://100.80.1.2:64318"
+      ],
+      "TaildropTarget": 0,
+      "NoFileSharingReason": "",
+      "InNetworkMap": true,
+      "InMagicSock": false,
+      "InEngine": false,
+      "KeyExpiry": "2027-05-04T21:19:40Z"
+    },
+    "nodekey:0000000000000000000000000000000000000000000000000000000000000003": {
+      "ID": "n3CNTRL",
+      "PublicKey": "nodekey:0000000000000000000000000000000000000000000000000000000000000003",
+      "HostName": "moto g24",
+      "DNSName": "moto-g24.tail1234.ts.net.",
+      "OS": "android",
+      "UserID": 145052051553183,
+      "TailscaleIPs": [
+        "100.101.102.103",
+        "fd7a:115c:a1e0::3"
+      ],
+      "AllowedIPs": [
+        "100.101.102.103/32",
+        "fd7a:115c:a1e0::3/128"
+      ],
+      "Addrs": [
+        "192.168.7.40:41641"
+      ],
+      "CurAddr": "",
+      "Relay": "sao",
+      "PeerRelay": "",
+      "RxBytes": 0,
+      "TxBytes": 0,
+      "Created": "2026-11-05T21:19:40.005906337Z",
+      "LastWrite": "0001-01-01T00:00:00Z",
+      "LastSeen": "0001-01-01T00:00:00Z",
+      "LastHandshake": "0001-01-01T00:00:00Z",
+      "Online": true,
+      "ExitNode": false,
+      "ExitNodeOption": false,
+      "Active": false,
+      "PeerAPIURL": [
+        "http://100.101.102.103:64318"
+      ],
+      "TaildropTarget": 0,
+      "NoFileSharingReason": "",
+      "InNetworkMap": true,
+      "InMagicSock": false,
+      "InEngine": false,
+      "KeyExpiry": "2027-05-04T21:19:40Z"
+    },
+    "nodekey:0000000000000000000000000000000000000000000000000000000000000004": {
+      "ID": "n4CNTRL",
+      "PublicKey": "nodekey:0000000000000000000000000000000000000000000000000000000000000004",
+      "HostName": "iPhone de valb",
+      "DNSName": "iphone-de-valb.tail1234.ts.net.",
+      "OS": "iOS",
+      "UserID": 145052051553183,
+      "TailscaleIPs": [
+        "100.90.4.4",
+        "fd7a:115c:a1e0::4"
+      ],
+      "AllowedIPs": [
+        "100.90.4.4/32",
+        "fd7a:115c:a1e0::4/128"
+      ],
+      "Addrs": [
+        "192.168.7.40:41641"
+      ],
+      "CurAddr": "",
+      "Relay": "sao",
+      "PeerRelay": "",
+      "RxBytes": 0,
+      "TxBytes": 0,
+      "Created": "2026-11-05T21:19:40.005906337Z",
+      "LastWrite": "0001-01-01T00:00:00Z",
+      "LastSeen": "2026-11-10T09:00:00Z",
+      "LastHandshake": "0001-01-01T00:00:00Z",
+      "Online": false,
+      "ExitNode": false,
+      "ExitNodeOption": false,
+      "Active": false,
+      "PeerAPIURL": [
+        "http://100.90.4.4:64318"
+      ],
+      "TaildropTarget": 0,
+      "NoFileSharingReason": "",
+      "InNetworkMap": true,
+      "InMagicSock": false,
+      "InEngine": false,
+      "KeyExpiry": "2027-05-04T21:19:40Z"
+    },
+    "nodekey:0000000000000000000000000000000000000000000000000000000000000005": {
+      "ID": "n5CNTRL",
+      "PublicKey": "nodekey:0000000000000000000000000000000000000000000000000000000000000005",
+      "HostName": "pixel 8",
+      "DNSName": "pixel-da-ana.tail1234.ts.net.",
+      "OS": "android",
+      "UserID": 230000000000001,
+      "TailscaleIPs": [
+        "100.90.5.5",
+        "fd7a:115c:a1e0::5"
+      ],
+      "AllowedIPs": [
+        "100.90.5.5/32",
+        "fd7a:115c:a1e0::5/128"
+      ],
+      "Addrs": [
+        "192.168.7.40:41641"
+      ],
+      "CurAddr": "",
+      "Relay": "sao",
+      "PeerRelay": "",
+      "RxBytes": 0,
+      "TxBytes": 0,
+      "Created": "2026-11-05T21:19:40.005906337Z",
+      "LastWrite": "0001-01-01T00:00:00Z",
+      "LastSeen": "0001-01-01T00:00:00Z",
+      "LastHandshake": "0001-01-01T00:00:00Z",
+      "Online": true,
+      "ExitNode": false,
+      "ExitNodeOption": false,
+      "Active": false,
+      "PeerAPIURL": [
+        "http://100.90.5.5:64318"
+      ],
+      "TaildropTarget": 0,
+      "NoFileSharingReason": "",
+      "InNetworkMap": true,
+      "InMagicSock": false,
+      "InEngine": false,
+      "KeyExpiry": "2027-05-04T21:19:40Z"
+    }
+  },
+  "User": {
+    "145052051553183": {
+      "ID": 145052051553183,
+      "LoginName": "valb@github",
+      "DisplayName": "Valb",
+      "ProfilePicURL": ""
+    },
+    "230000000000001": {
+      "ID": 230000000000001,
+      "LoginName": "ana@github",
+      "DisplayName": "Ana",
+      "ProfilePicURL": ""
+    }
+  },
+  "ClientVersion": null
+}
