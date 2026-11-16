@@ -56,6 +56,19 @@ Ficam em `packages/*/test` e `apps/*/test`, com cenários de uso real:
 - chat com o Claude Code de verdade contra uma API falsa local (`apps/server/test/claude.ts`), numa HOME temporária: hook do `.claude/settings.json` do repositório não roda, `Grep` sem caminho não devolve `.env`, `Read` do `.envrc` é negado, erro sem login em português, e conversa que reabre depois do servidor reiniciar com epoch novo, sem perder mensagem nem o cartão do post;
 - app web: a store ignora evento de conversa não aberta, recarrega tudo quando o epoch muda e tira o post ao receber `gone` (ou quando o GET dele volta 404).
 
+## Release
+
+A branch `release` é a das versões: cada push nela roda o workflow `Release` (`.github/workflows/release.yml`), que confere os tipos, roda os testes, compila o web e publica nos Releases do GitHub o `social-grid.tar.gz` e o `install.sh`. Os PRs passam pelas mesmas etapas, sem publicar. Commits na `main` não publicam nada.
+
+```sh
+git push origin main:release
+```
+
+- **Versão:** a seguinte à última tag `v*` no patch (`v0.1.3` vira `0.1.4`). Para subir a minor ou a major, ponha a versão nova no `version` do `package.json` da raiz; maior que a última tag, ela vale (`deploy/version.ts`).
+- **Pacote:** `deploy/pack.sh` junta o código do servidor e dos pacotes, o web já compilado e o lockfile, sem `node_modules` nem testes, com a versão no arquivo `VERSION`. Fica em `release/social-grid.tar.gz`.
+- **Instalador:** `deploy/install.sh` rodado pelo `curl` baixa a release para `~/.local/opt/social-grid` (ou `SOCIAL_GRID_HOME`), instala só as dependências de produção do servidor, troca a pasta e reinicia o serviço. Rodado de dentro de um clone, compila e instala o próprio clone. Nos dois casos põe o ícone no tema `hicolor` do usuário e o atalho `social-grid.desktop`, que abre o `deploy/app.sh` com a classe `social-grid`.
+- **Falha:** se o workflow quebrar depois de criar a tag, ele apaga a release pela metade e a tag, e a versão não fica pulada.
+
 ## Padrões do código
 
 - Sem comentários em nenhum arquivo.
