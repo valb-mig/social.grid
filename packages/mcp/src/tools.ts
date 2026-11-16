@@ -1,8 +1,8 @@
-import { lstat, open, realpath } from 'node:fs/promises'
+import { lstat, open, readFile, realpath } from 'node:fs/promises'
 import { isAbsolute, sep } from 'node:path'
 import { range } from '@social-grid/core/day.ts'
 import { Fault, fail } from '@social-grid/core/fault.ts'
-import { MAX_BYTES, sniff } from '@social-grid/core/media.ts'
+import { MAX_BYTES, kind as type, mime, sniff } from '@social-grid/core/media.ts'
 import { ids, nets } from '@social-grid/core/network/index.ts'
 import type { Issue } from '@social-grid/core/network/net.ts'
 import { total, type Config } from '@social-grid/core/plan/config.ts'
@@ -12,6 +12,7 @@ import { STATUSES, type Changes, type Post } from '@social-grid/core/post/post.t
 import type { Repo } from '@social-grid/core/post/repo.ts'
 import { stats, type Source } from '@social-grid/core/project/project.ts'
 import { z } from 'zod'
+import { about, dress, MAX, PRINTS, scale, scan, type Spec } from './mockup.ts'
 import { capture, render, SIZES, type Shape } from './render.ts'
 
 export type Chat = { project: string; dir: string; made: Set<string> }
@@ -128,6 +129,36 @@ async function kind(path: string): Promise<string> {
   } finally {
     await fh.close()
   }
+}
+
+const SCREEN_BYTES = 20 * 1024 * 1024
+
+const lost = (name: string) => fail('not_found', `o post não tem a mídia ${name}; em midia vai um nome da lista de mídia dele`)
+
+async function still(ctx: Ctx, post: Post, name: string): Promise<string> {
+  const path = (await ctx.repo.file(post.id, name)) ?? lost(name)
+  const st = await lstat(path)
+  if (st.size > SCREEN_BYTES) fail('too_large', `a mídia ${name} passa de 20 MB para ir na tela`)
+  const buf = await readFile(path)
+  const ext = sniff(buf.subarray(0, 32))
+  if (!ext || type(ext) !== 'image') fail('invalid', `a mídia ${name} não é imagem`)
+  return `data:${mime(ext)};base64,${buf.toString('base64')}`
+}
+
+async function screens(ctx: Ctx, post: Post, specs: Spec[]): Promise<(string | null)[]> {
+  const urls = specs.map((m) => (m.print === undefined ? null : local(m.print, ctx.app)))
+  for (const m of specs) if (m.midia !== undefined && !post.media.includes(m.midia)) lost(m.midia)
+  const out: (string | null)[] = []
+  for (const [i, m] of specs.entries()) {
+    const href = urls[i]
+    if (m.midia !== undefined) out.push(await still(ctx, post, m.midia))
+    else if (href) {
+      const k = Math.min(3, Math.max(1, Math.ceil(scale(m))))
+      const t = m.model.tela
+      out.push(await capture(href, { w: t.w * k, h: t.h * k }, k, async (f) => `data:image/png;base64,${(await readFile(f)).toString('base64')}`))
+    } else out.push(null)
+  }
+  return out
 }
 
 export const tools: Tool[] = [
@@ -285,7 +316,8 @@ export const tools: Tool[] = [
 
   tool(
     'gerar_imagem',
-    `Transforma um HTML seu (capa, card, slide do carrossel) em PNG e anexa no fim da mídia do post. A página roda fechada: sem script, sem rede e sem acesso ao disco, então CSS, fontes e imagens vão inline ou em data:. Manrope (400 a 800) e JetBrains Mono (400, 500 e 700) já estão carregadas. O tamanho sai do formato do post (story vertical, artigo do LinkedIn paisagem, o resto retrato) ou de tamanho: ${sizes}. Desenhe o body exatamente nesse tamanho, sem rolagem.`,
+    `Transforma um HTML seu (capa, card, slide do carrossel) em PNG e anexa no fim da mídia do post. A página roda fechada: sem script, sem rede e sem acesso ao disco, então CSS, fontes e imagens vão inline ou em data:. Manrope (400 a 800) e JetBrains Mono (400, 500 e 700) já estão carregadas. O tamanho sai do formato do post (story vertical, artigo do LinkedIn paisagem, o resto retrato) ou de tamanho: ${sizes}. Desenhe o body exatamente nesse tamanho, sem rolagem.
+Mockup de aparelho: escreva <sg-mockup modelo="celular" cor="roxo" largura="380" style="position:absolute;left:600px;top:420px">HTML da tela</sg-mockup> e o servidor põe o aparelho sem fundo, com o conteúdo encaixado na tela. Modelos: ${about}. largura é em px e a altura sai dela; posicione e gire pelo style (position, left, top, transform, filter:drop-shadow para a sombra), sem width nem height. Na tela vai um destes: HTML filho, desenhado no tamanho da tela do aparelho (o celular tem 393x852); midia="m-xxx.png", uma imagem deste post; ou print="url", uma página deste PC (as mesmas regras do capturar_tela), aberta já no tamanho da tela do aparelho, então o celular pega o layout de celular do app. HTML filho junto com midia ou print fica por cima da imagem. No navegador, endereco="mocha.app" escreve o endereço na barra; sem ele a barra fica vazia (o endereço do print nunca aparece). Até ${MAX} mockups por imagem, ${PRINTS} com print.`,
     {
       id: z.string().max(100),
       html: z.string().min(1).max(300_000),
@@ -295,8 +327,11 @@ export const tools: Tool[] = [
     async (ctx, a) => {
       const post = await target(ctx, a.id)
       const s = SIZES[a.tamanho ?? SHAPES[`${post.network}/${post.format}`] ?? 'retrato']
-      const r = await render(a.html, s, (file) => ctx.ops.attach(a.id, file, 'png'))
-      return { ...out(r), arquivo: r.name, tamanho: `${s.w}x${s.h}`, ...(r.grew ? { formato_novo: 'o feed virou carrossel porque agora tem mais de uma mídia' } : {}) }
+      const specs = scan(a.html)
+      const html = specs.length ? dress(a.html, specs, await screens(ctx, post, specs)) : a.html
+      const r = await render(html, s, (file) => ctx.ops.attach(a.id, file, 'png'))
+      const mockups = specs.map((m) => `${m.model.id} ${m.cor} ${m.width}x${Math.round(m.model.h * scale(m))}`)
+      return { ...out(r), arquivo: r.name, tamanho: `${s.w}x${s.h}`, ...(mockups.length ? { mockups } : {}), ...(r.grew ? { formato_novo: 'o feed virou carrossel porque agora tem mais de uma mídia' } : {}) }
     },
   ),
 

@@ -55,6 +55,41 @@ function png(buf: Buffer) {
   return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20), corner: inflateSync(Buffer.concat(parts)).subarray(1, 4).toString('hex') }
 }
 
+function decode(buf: Buffer) {
+  const w = buf.readUInt32BE(16)
+  const h = buf.readUInt32BE(20)
+  const ch = buf[25] === 6 ? 4 : 3
+  const parts: Buffer[] = []
+  for (let i = 8; i < buf.length; ) {
+    const len = buf.readUInt32BE(i)
+    if (buf.toString('ascii', i + 4, i + 8) === 'IDAT') parts.push(buf.subarray(i + 8, i + 8 + len))
+    i += 12 + len
+  }
+  const raw = inflateSync(Buffer.concat(parts))
+  const row = w * ch
+  const px = Buffer.alloc(h * row)
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (row + 1)]!
+    for (let x = 0; x < row; x++) {
+      const a = x >= ch ? px[y * row + x - ch]! : 0
+      const b = y ? px[(y - 1) * row + x]! : 0
+      const c = x >= ch && y ? px[(y - 1) * row + x - ch]! : 0
+      const p = a + b - c
+      const near = Math.abs(p - a) <= Math.abs(p - b) && Math.abs(p - a) <= Math.abs(p - c) ? a : Math.abs(p - b) <= Math.abs(p - c) ? b : c
+      const v = raw[y * (row + 1) + 1 + x]!
+      px[y * row + x] = v + [0, a, b, (a + b) >> 1, near][f]!
+    }
+  }
+  return (x: number, y: number) => px.subarray((y * w + x) * ch, (y * w + x) * ch + 3).toString('hex')
+}
+
+async function look(v: Awaited<ReturnType<typeof setup>>['v'], id: string, i = 0) {
+  const post = (await v.repo.get(id))!
+  return decode(await readFile(join(v.dir, 'posts', id, post.media[i]!)))
+}
+
+const dark = (hex: string) => [0, 2, 4].every((i) => parseInt(hex.slice(i, i + 2), 16) < 40)
+
 async function media(v: Awaited<ReturnType<typeof setup>>['v'], id: string) {
   const post = (await v.repo.get(id))!
   return Promise.all(post.media.map(async (m) => png(await readFile(join(v.dir, 'posts', id, m)))))
@@ -226,6 +261,98 @@ test('capturar_tela só abre página deste PC e recusa o resto antes de abrir o 
   assert.deepEqual((await v.repo.get(outro))!.media, [])
 })
 
+const stage = (inner: string) =>
+  `<!doctype html><html><head><style>body{width:1080px;height:1350px;margin:0;background:#ff00ff;position:relative}</style></head><body>${inner}</body></html>`
+
+const phone = (attrs: string, inner = '') => `<sg-mockup modelo="celular" largura="443" ${attrs} style="position:absolute;left:40px;top:40px">${inner}</sg-mockup>`
+const laptop = (attrs: string, inner = '') => `<sg-mockup modelo="laptop" largura="470" ${attrs} style="position:absolute;left:560px;top:40px">${inner}</sg-mockup>`
+
+test('sg-mockup põe o aparelho sem fundo e o HTML da tela dentro do recorte, com a ilha por cima', { skip }, async () => {
+  const { v, run, make } = await setup()
+  const id = await make()
+  const fill = (c: string) => `<div style="position:absolute;inset:0;background:${c}"></div>`
+  const r = await run('gerar_imagem', { id, html: stage(phone('cor="prata"', fill('#00ff00')) + laptop('', fill('#0000ff'))) })
+  assert.equal(r.isError, undefined, r.content[0]!.text)
+  assert.deepEqual(JSON.parse(r.content[0]!.text).mockups, ['celular prata 443x894', 'laptop preto 470x272'])
+  const at = await look(v, id)
+  assert.equal(at(5, 5), 'ff00ff')
+  assert.equal(at(261, 600), '00ff00')
+  assert.equal(at(65 + 391, 600), '00ff00')
+  assert.ok(dark(at(40 + 18, 600)), 'borda do celular')
+  assert.ok(dark(at(65 + 12, 61 + 12)), 'canto arredondado da tela fica na borda')
+  assert.equal(at(261, 40 + 50), '000000')
+  assert.equal(at(40 + 2, 40 + 2), 'ff00ff')
+  assert.equal(at(795, 170), '0000ff')
+  assert.ok(dark(at(560 + 50, 170)), 'borda do laptop')
+  assert.equal(at(560 + 2, 40 + 2), 'ff00ff')
+  assert.equal(at(1060, 600), 'ff00ff')
+})
+
+test('sg-mockup com print abre a página no tamanho da tela de cada aparelho, desde o carregamento', { skip }, async () => {
+  const { v, chat, run, make } = await setup()
+  const hits: string[] = []
+  const srv = createServer((req, res) => {
+    hits.push(req.url ?? '')
+    res.setHeader('content-type', 'text/html; charset=utf-8')
+    res.end(`<!doctype html><style>html,body{margin:0;height:100%}</style><body><script>document.body.style.background = innerWidth < 500 ? '#00ffff' : '#ffff00'</script></body>`)
+  })
+  await new Promise<void>((ok) => srv.listen(0, '127.0.0.1', ok))
+  const url = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`
+  const app: Ctx = { ...chat, app: url }
+  try {
+    const id = await make()
+    const r = await run('gerar_imagem', { id, html: stage(phone('print="/"') + laptop(`print="${url}/painel"`)) }, app)
+    assert.equal(r.isError, undefined, r.content[0]!.text)
+    const at = await look(v, id)
+    assert.equal(at(261, 600), '00ffff')
+    assert.equal(at(795, 170), 'ffff00')
+    assert.deepEqual(hits.filter((h) => h !== '/favicon.ico').sort(), ['/', '/painel'])
+  } finally {
+    srv.close()
+  }
+})
+
+test('sg-mockup com midia põe uma imagem do post na tela e o HTML filho por cima dela', { skip }, async () => {
+  const { v, run, make } = await setup()
+  const id = await make()
+  assert.equal((await run('gerar_imagem', { id, html: stage('').replace('#ff00ff', '#ff0000') })).isError, undefined)
+  const name = (await v.repo.get(id))!.media[0]!
+  const band = '<div style="position:absolute;left:0;top:300px;width:393px;height:100px;background:#0000ff"></div>'
+  const r = await run('gerar_imagem', { id, html: stage(phone(`midia="${name}"`, band)) })
+  assert.equal(r.isError, undefined, r.content[0]!.text)
+  const at = await look(v, id, 1)
+  assert.equal(at(261, 700), 'ff0000')
+  assert.equal(at(261, 40 + 21 + 350), '0000ff')
+  assert.equal(at(5, 5), 'ff00ff')
+})
+
+test('sg-mockup errado, print de fora do PC e mídia que o post não tem são recusados antes de abrir o Chrome', async () => {
+  const { v, run, make } = await setup()
+  const id = await make()
+  const before = process.env.SOCIAL_GRID_CHROME
+  process.env.SOCIAL_GRID_CHROME = '/nao/existe/chrome'
+  try {
+    const cases: [string, RegExp][] = [
+      [phone('print="http://example.com/"'), /só abre página deste PC/],
+      [phone('print="file:///etc/passwd"'), /só abre página http deste PC/],
+      [phone('print="/hoje"'), /endereço do social\.grid/],
+      [phone('midia="m-0000000000.png"'), /não tem a mídia m-0000000000\.png/],
+      [phone('midia="../../segredo.png"'), /não tem a mídia/],
+      ['<sg-mockup modelo="tablet"></sg-mockup>', /desconhecido: tablet/],
+      [phone('cor="dourado"'), /cores preto, prata, roxo/],
+    ]
+    for (const [html, msg] of cases) {
+      const r = await run('gerar_imagem', { id, html: stage(html) })
+      assert.equal(r.isError, true, html)
+      assert.match(r.content[0]!.text, msg, html)
+    }
+    assert.deepEqual((await v.repo.get(id))!.media, [])
+  } finally {
+    if (before === undefined) delete process.env.SOCIAL_GRID_CHROME
+    else process.env.SOCIAL_GRID_CHROME = before
+  }
+})
+
 test('capturar_tela abre a página já na largura da escala, mesmo abaixo de 500 px, e o script lê essa largura', { skip }, async () => {
   const { v, chat, run, make } = await setup()
   const srv = createServer((_req, res) => {
@@ -242,4 +369,31 @@ test('capturar_tela abre a página já na largura da escala, mesmo abaixo de 500
   } finally {
     srv.close()
   }
+})
+
+test('sg-mockup navegador: página até a borda da janela, cantos de baixo recortados, barra no tema e endereço escrito na pílula', { skip }, async () => {
+  const { v, run, make } = await setup()
+  const id = await make({ formato: 'carrossel', titulo: 'Site do mocha' })
+  const fill = '<div style="position:absolute;inset:0;background:#00ff00"></div>'
+  const win = (x: number, attrs: string) => `<sg-mockup modelo="navegador" largura="720" ${attrs} style="position:absolute;left:${x}px;top:40px">${fill}</sg-mockup>`
+  const html = `<!doctype html><html><body style="width:1920px;height:1080px;margin:0;background:#ff00ff;position:relative">${win(40, 'endereco="mocha.app"')}${win(1000, 'cor="escuro"')}</body></html>`
+  const r = await run('gerar_imagem', { id, html, tamanho: 'paisagem' })
+  assert.equal(r.isError, undefined, r.content[0]!.text)
+  assert.deepEqual(JSON.parse(r.content[0]!.text).mockups, ['navegador claro 720x476', 'navegador escuro 720x476'])
+  const at = await look(v, id)
+  assert.equal(at(20, 20), 'ff00ff')
+  assert.equal(at(400, 291), '00ff00')
+  assert.equal(at(42, 300), '00ff00')
+  assert.equal(at(400, 513), '00ff00')
+  assert.equal(at(40, 515), 'ff00ff')
+  assert.equal(at(758, 515), 'ff00ff')
+  assert.equal(at(165, 53), 'f3f3f5')
+  assert.equal(at(1125, 53), '2c2c2e')
+  const ink = (x0: number, pill: string) => {
+    let n = 0
+    for (let x = x0 + 230; x <= x0 + 482; x++) for (let y = 47; y <= 59; y++) if (at(x, y) !== pill) n++
+    return n
+  }
+  assert.ok(ink(40, 'e3e3e6') > 20, 'endereço na pílula clara')
+  assert.equal(ink(1000, '3a3a3c'), 0, 'pílula vazia sem endereco')
 })
