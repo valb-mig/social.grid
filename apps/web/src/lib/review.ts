@@ -6,6 +6,7 @@ import { useStore } from './store.ts'
 
 export type Read = {
   pk: Pack
+  title: string | null
   head: string
   tail: string
   gap: string
@@ -24,8 +25,10 @@ export function read(post: Post): Read {
   const line = cut < 0 ? pk.caption : pk.caption.slice(0, cut)
   const after = cut < 0 ? '' : pk.caption.slice(cut)
   const gap = /^\s*/.exec(after)?.[0] ?? ''
+  const issues = check(post)
   return {
     pk,
+    title: issues.some((i) => i.code.startsWith('title')) ? post.title : null,
     head,
     tail: line.slice(head.length),
     gap,
@@ -33,7 +36,7 @@ export function read(post: Post): Read {
     tags: pk.tags.split(' ').filter(Boolean),
     size: len(pk.text),
     max: net.max,
-    warns: check(post).filter((i) => i.level === 'warn'),
+    warns: issues.filter((i) => i.level === 'warn'),
   }
 }
 

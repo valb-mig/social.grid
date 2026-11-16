@@ -1,3 +1,4 @@
+import { find } from '@social-grid/core/network/index.ts'
 import type { Status } from '@social-grid/core/post/post.ts'
 import type { ReactNode, SVGProps } from 'react'
 
@@ -84,11 +85,32 @@ export function Li(p: Ic) {
   )
 }
 
-export function NetIcon({ net, ...p }: Ic & { net: string }) {
-  return net === 'linkedin' ? <Li {...p} /> : <Ig {...p} />
+export function Tt(p: Ic) {
+  return (
+    <svg {...svg(p)}>
+      <path d="M14.5 3v11.5a4.5 4.5 0 1 1-4.5-4.5" />
+      <path d="M14.5 3c.5 2.8 2.4 4.6 5 4.8" />
+    </svg>
+  )
 }
 
-export const color = (net: string) => `var(--color-${net === 'linkedin' ? 'linkedin' : 'instagram'})`
+export function Yt(p: Ic) {
+  return (
+    <svg {...svg(p)}>
+      <rect x="2.5" y="5" width="19" height="14" rx="4" />
+      <path d="m10 9.2 4.8 2.8-4.8 2.8z" />
+    </svg>
+  )
+}
+
+const ICONS: Record<string, (p: Ic) => ReactNode> = { instagram: Ig, linkedin: Li, tiktok: Tt, youtube: Yt }
+
+export function NetIcon({ net, ...p }: Ic & { net: string }) {
+  const Icon = ICONS[net] ?? Ig
+  return <Icon {...p} />
+}
+
+export const color = (net: string) => `var(--color-${find(net) ? net : 'instagram'})`
 
 export function Badge({ net, sm = false }: { net: string; sm?: boolean }) {
   return (

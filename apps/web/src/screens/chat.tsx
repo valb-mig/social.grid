@@ -164,7 +164,7 @@ function Panel({ full = false }: { full?: boolean }) {
     }
   }
 
-  const skill = pre.rede ? `${pre.rede}-post-writer` : config?.skills[0]
+  const skill = pre.rede ? config?.skills.find((s) => s === `${pre.rede}-post-writer`) : config?.skills[0]
 
   return (
     <aside className={`flex min-h-0 flex-col overflow-hidden ${full ? 'h-[calc(100dvh-64px-env(safe-area-inset-bottom))] bg-surface' : 'card'}`}>

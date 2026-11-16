@@ -59,8 +59,10 @@ export function need(p: Post): string | null {
     const miss = (f?.min ?? 1) - n
     return n === 0 ? 'falta a mídia' : miss > 1 ? `faltam ${miss} mídias` : 'falta 1 mídia'
   }
+  if (e.code === 'media_image') return 'só imagem'
   if (e.code === 'media_max') return 'mídia demais'
-  if (e.code === 'caption') return p.network === 'linkedin' ? 'falta o texto' : 'falta a legenda'
+  if (e.code === 'caption') return p.network === 'linkedin' || p.format === 'comunidade' ? 'falta o texto' : 'falta a legenda'
+  if (e.code === 'title') return 'título longo demais'
   if (e.code === 'length') return 'texto longo demais'
   if (e.code === 'tags_max') return 'hashtags demais'
   return e.text.toLowerCase()

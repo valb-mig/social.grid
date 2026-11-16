@@ -1,5 +1,6 @@
 import { label as dayLabel, weekday } from '@social-grid/core/day.ts'
-import { find, get, rules, slot } from '@social-grid/core/network/index.ts'
+import { kind as type } from '@social-grid/core/media.ts'
+import { find, get, ids, rules, shape, slot } from '@social-grid/core/network/index.ts'
 import { hook, len, num, type Issue } from '@social-grid/core/network/net.ts'
 import { slots } from '@social-grid/core/plan/slots.ts'
 import { bundle, check } from '@social-grid/core/post/ops.ts'
@@ -285,6 +286,8 @@ function Title({ e, className }: { e: Edit; className: string }) {
   )
 }
 
+const described = (e: Edit) => e.issues.some((i) => i.code.startsWith('title'))
+
 function Editor({ e }: { e: Edit }) {
   const net = get(e.post.network)
   return (
@@ -292,7 +295,7 @@ function Editor({ e }: { e: Edit }) {
       <Crumb e={e} />
       <Media e={e} />
       <div className="lbl -mb-2">
-        <h3>Legenda</h3>
+        <h3>{described(e) ? 'Descrição' : 'Legenda'}</h3>
         <small>gancho até {net.hook} letras</small>
       </div>
       <Caption e={e} />
@@ -454,7 +457,8 @@ function Tags({ e }: { e: Edit }) {
       <div className="lbl">
         <h3>Hashtags</h3>
         <small className={tone}>
-          {e.post.hashtags.length} de {net.cap} · ideal {net.ideal[0]} a {net.ideal[1]}
+          {e.post.hashtags.length}
+          {Number.isFinite(net.cap) ? ` de ${net.cap}` : ''} · ideal {net.ideal[0]} a {net.ideal[1]}
         </small>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -548,8 +552,8 @@ function Settings({ e, flat = false }: { e: Edit; flat?: boolean }) {
   return (
     <aside className={`flex min-h-0 flex-col gap-5 ${flat ? '' : 'card overflow-y-auto p-6 scroll-none'}`}>
       <Field title="Rede">
-        <div className="grid grid-cols-2 gap-1 rounded-full border border-border bg-surface-2 p-1">
-          {['instagram', 'linkedin'].map((n) => (
+        <div className="grid grid-cols-2 gap-1 rounded-[22px] border border-border bg-surface-2 p-1">
+          {ids.map((n) => (
             <button
               key={n}
               className="flex h-9 items-center justify-center gap-2 rounded-full text-[13px] font-extrabold"
@@ -673,14 +677,53 @@ function Preview({ post }: { post: Post }) {
     const t = (hh! * 60 + mm! - before + 1440) % 1440
     return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
   })()
-  const story = post.format === 'story' || post.format === 'reels'
+  const story = shape(post.network, post.format) === 'vertical'
+  const fname = (net.formats.find((f) => f.id === post.format)?.name ?? post.format).toLowerCase()
+  const card = post.network === 'linkedin' || post.format === 'comunidade'
+  const cover = post.media.find((m) => type(m) === 'image') ?? post.media[0]
   return (
     <aside className="card flex min-h-0 flex-col gap-3 overflow-y-auto p-5 scroll-none">
       <div className="sh">
         <h2>Prévia</h2>
-        <small>{post.network === 'linkedin' ? 'como aparece no feed' : story ? `como aparece no ${post.format}` : 'como aparece no feed'}</small>
+        <small>{story && !card ? `como aparece no ${post.network === 'instagram' ? fname : net.name}` : post.format === 'video' && post.network === 'youtube' ? 'como aparece na lista' : 'como aparece no feed'}</small>
       </div>
-      {post.network === 'linkedin' ? (
+      {post.network !== 'instagram' && story ? (
+        <div className="relative aspect-[9/16] overflow-hidden rounded-lg border border-border bg-surface-3">
+          {post.media[0] ? <Thumb post={post} name={post.media[0]} /> : <div className="grid size-full place-items-center text-xs font-bold text-text-faint">sem mídia</div>}
+          {post.media.length > 1 && <span className="absolute top-2.5 right-2.5 grid h-6 place-items-center rounded-full bg-black/55 px-2.5 text-[11.5px] font-extrabold">1/{post.media.length}</span>}
+          <div className="absolute right-2.5 bottom-24 flex flex-col items-center gap-4 text-white">
+            <Heart size={20} />
+            <MessageCircle size={20} />
+            <Send size={20} />
+          </div>
+          <div className="absolute inset-x-0 bottom-0 px-3 pt-12 pb-3.5 pr-12 text-[13px] leading-[1.45] text-white" style={{ background: 'linear-gradient(to top, rgba(0,0,0,.8), transparent)' }}>
+            <b className="mb-0.5 block">@{handle}</b>
+            {post.network === 'youtube' ? (
+              <p className="line-clamp-2">{post.title}</p>
+            ) : (
+              <p>
+                {h.head || <span className="text-white/60">sem legenda</span>} {more && <span className="text-white/60">... mais</span>}
+              </p>
+            )}
+          </div>
+        </div>
+      ) : post.network === 'youtube' && post.format === 'video' ? (
+        <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
+          <div className="aspect-video overflow-hidden bg-surface-3">
+            {cover ? <Thumb post={post} name={cover} /> : <div className="grid size-full place-items-center text-xs font-bold text-text-faint">sem mídia</div>}
+          </div>
+          <div className="flex gap-2.5 px-3 py-3">
+            <img src="/logo.svg" alt="" className="size-[34px] flex-none rounded-full" />
+            <div className="min-w-0">
+              <b className="line-clamp-2 text-[13.5px] leading-[1.35]">{post.title}</b>
+              <small className="text-[11.5px] font-semibold text-text-faint">{handle} · agora</small>
+            </div>
+          </div>
+          <p className="mx-3 mb-3 rounded-md bg-surface-3 px-3 py-2.5 text-[12.5px] leading-[1.45] whitespace-pre-line">
+            {h.head || <span className="text-text-faint">sem descrição</span>} {more && <span className="text-text-faint">...mais</span>}
+          </p>
+        </div>
+      ) : card ? (
         <div className="overflow-hidden rounded-lg border border-border bg-surface-2">
           <div className="flex items-center gap-2.5 px-3 py-2.5">
             <img src="/logo.svg" alt="" className="size-[34px] rounded-full" />
@@ -695,8 +738,9 @@ function Preview({ post }: { post: Post }) {
             {len(post.caption) > net.hook && <span className="text-text-faint">…ver mais</span>}
           </p>
           {post.media[0] && (
-            <div className="aspect-[1.2] overflow-hidden">
+            <div className={`relative overflow-hidden ${post.network === 'youtube' ? 'aspect-square' : 'aspect-[1.2]'}`}>
               <Thumb post={post} name={post.media[0]} />
+              {post.media.length > 1 && <span className="absolute top-2.5 right-2.5 grid h-6 place-items-center rounded-full bg-black/55 px-2.5 text-[11.5px] font-extrabold">1/{post.media.length}</span>}
             </div>
           )}
           <div className="flex justify-around border-t border-border py-2 text-xs font-bold text-text-muted">
@@ -770,7 +814,7 @@ function MobileEditor({ e, steps }: { e: Edit; steps: () => void }) {
       <Media e={e} big />
       <div className="flex min-h-[260px] flex-col">
         <div className="lbl">
-          <h3>Legenda</h3>
+          <h3>{described(e) ? 'Descrição' : 'Legenda'}</h3>
           <small>gancho até {get(e.post.network).hook} letras</small>
         </div>
         <Caption e={e} plain />
@@ -840,9 +884,17 @@ function Review({ r, net }: { r: Read; net: string }) {
   const loud = r.warns.some((i) => i.code.startsWith('tags'))
   return (
     <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4">
+      {r.title !== null && (
+        <div className="flex flex-col gap-2.5">
+          <div className="lbl mb-0">
+            <h3>Título do vídeo</h3>
+          </div>
+          <p className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-[14.5px] leading-[1.45] font-bold break-words">{r.title}</p>
+        </div>
+      )}
       <div className="flex flex-col gap-2.5">
         <div className="lbl mb-0">
-          <h3>Legenda</h3>
+          <h3>{r.title === null ? 'Legenda' : 'Descrição'}</h3>
           <small className={`font-mono text-xs ${r.size > r.max ? 'text-danger' : ''}`}>
             {num(r.size)} / {num(r.max)}
           </small>
@@ -920,11 +972,12 @@ function Steps({ e, edit, view }: { e: Edit; edit: () => void; view: (s: Status)
       if (r.k === 'unsupported') fail('este navegador não compartilha arquivos; a legenda foi copiada')
       if (r.k === 'failed') fail(r.why)
     }],
-    ['legenda', 'Legenda', 'copiar', async () => void ((await copy(pk.caption)) && mark('legenda'))],
+    ['legenda', r.title === null ? 'Legenda' : 'Descrição', 'copiar', async () => void ((await copy(pk.caption)) && mark('legenda'))],
     ['tags', `Hashtags (${p.hashtags.length})`, 'copiar', async () => void ((await copy(pk.tags)) && mark('tags'))],
   ]
+  if (r.title !== null) items.splice(1, 0, ['titulo', 'Título do vídeo', 'copiar', async () => void ((await copy(p.title)) && mark('titulo'))])
   if (pk.comment) items.push(['comentario', 'Comentário com o link', 'copiar', async () => void ((await copy(pk.comment)) && mark('comentario'))])
-  const doneText: Record<string, string> = { midia: 'Mídia enviada pro app', legenda: 'Legenda copiada', tags: 'Hashtags copiadas', comentario: 'Comentário copiado' }
+  const doneText: Record<string, string> = { midia: 'Mídia enviada pro app', titulo: 'Título copiado', legenda: r.title === null ? 'Legenda copiada' : 'Descrição copiada', tags: 'Hashtags copiadas', comentario: 'Comentário copiado' }
   return (
     <div className="flex min-h-full flex-col gap-4 px-4 pt-[max(16px,env(safe-area-inset-top))] pb-28">
       <div className="flex items-center gap-2.5 pt-2">
@@ -942,7 +995,7 @@ function Steps({ e, edit, view }: { e: Edit; edit: () => void; view: (s: Status)
         </button>
       </div>
       <Slides post={p} />
-      {(pk.caption || pk.tags || pk.comment) && <Review r={r} net={p.network} />}
+      {(pk.caption || pk.tags || pk.comment || r.title) && <Review r={r} net={p.network} />}
       <div className="flex flex-col gap-2">
         {items.map(([k, name, act, run], i) => {
           const ok = done.includes(k)

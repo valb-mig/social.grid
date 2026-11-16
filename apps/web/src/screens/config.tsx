@@ -1,4 +1,4 @@
-import { nets, rules } from '@social-grid/core/network/index.ts'
+import { ids, nets, rules } from '@social-grid/core/network/index.ts'
 import { total, weekly, type Config, type Rule } from '@social-grid/core/plan/config.ts'
 import { tags as clean } from '@social-grid/core/post/post.ts'
 import { Bell, BookOpen, Calendar, Check, ChevronDown, Clock, FileText, Hash, Plus, Share, Smartphone, Sparkles, X } from 'lucide-react'
@@ -23,6 +23,7 @@ const MODELS: Choice[] = [
   ...['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'].map((m) => ({ value: m, label: model(m), sub: m })),
 ]
 const TIPS: Record<string, string> = { instagram: 'Skill sugere ter a qui, 12h ou 18h a 21h', linkedin: 'Skill sugere ter a qui, 8h a 10h' }
+const HANDLES: Record<string, string> = { instagram: '@seu.perfil', linkedin: 'in/seu-perfil', tiktok: '@seu.perfil', youtube: '@seucanal' }
 
 type Tab = 'redes' | 'frequencia' | 'hashtags' | 'skills' | 'celular'
 
@@ -126,10 +127,12 @@ function Frequencia() {
       {nets.map((n) => (
         <div key={n.id} className={`overflow-hidden rounded-xl border border-border bg-surface-2 ${config.nets[n.id]?.on ? '' : 'opacity-60'}`}>
           <Head net={n.id}>
-            <span className="ml-auto flex items-center gap-1.5 text-xs font-bold opacity-80">
-              <Sparkles size={14} />
-              {TIPS[n.id]}
-            </span>
+            {TIPS[n.id] && (
+              <span className="ml-auto flex items-center gap-1.5 text-xs font-bold opacity-80">
+                <Sparkles size={14} />
+                {TIPS[n.id]}
+              </span>
+            )}
           </Head>
           {rules(n.id).map((f) => {
             const r = rule(n.id, f.id)
@@ -301,7 +304,7 @@ function Redes() {
             </Head>
             <label className="flex items-center gap-3 px-5 py-4">
               <span className="w-24 text-[13px] font-bold text-text-muted">Perfil</span>
-              <input className="field" placeholder={n.id === 'instagram' ? '@seu.perfil' : 'in/seu-perfil'} value={c.handle} maxLength={80} onChange={(e) => edit((x) => ((x.nets[n.id]!.handle = e.target.value), x))} />
+              <input className="field" placeholder={HANDLES[n.id] ?? '@seu.perfil'} value={c.handle} maxLength={80} onChange={(e) => edit((x) => ((x.nets[n.id]!.handle = e.target.value), x))} />
             </label>
           </div>
         )
@@ -456,7 +459,10 @@ function Skills() {
   }
 
   if (!config) return null
-  const dotOf = (e: Entry) => (e.kind === 'agent' ? 'var(--color-ai)' : e.name.includes('linkedin') ? 'var(--color-linkedin)' : e.name.includes('instagram') ? 'var(--color-instagram)' : 'var(--color-text-faint)')
+  const dotOf = (e: Entry) => {
+    const net = ids.find((n) => e.name.includes(n))
+    return e.kind === 'agent' ? 'var(--color-ai)' : net ? color(net) : 'var(--color-text-faint)'
+  }
 
   return (
     <section className={`min-h-0 ${mobile ? 'flex flex-col gap-4' : 'card grid grid-cols-[300px_1fr] overflow-hidden p-0'}`}>

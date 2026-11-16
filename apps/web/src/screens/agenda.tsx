@@ -1,5 +1,5 @@
 import { add, clock, days, monday, MONTHS, today, WEEK } from '@social-grid/core/day.ts'
-import { find } from '@social-grid/core/network/index.ts'
+import { find, ids } from '@social-grid/core/network/index.ts'
 import { open, slots, type Slot } from '@social-grid/core/plan/slots.ts'
 import type { Post } from '@social-grid/core/post/post.ts'
 import { stats } from '@social-grid/core/project/project.ts'
@@ -17,8 +17,6 @@ import { list, useStore } from '../lib/store.ts'
 import { useView } from './view.ts'
 import { Week } from './week.tsx'
 
-const NETS = ['instagram', 'linkedin']
-
 function useAgenda(from: string, to: string, nets?: Set<string>) {
   const posts = useStore((s) => s.posts)
   const config = useStore((s) => s.config)
@@ -32,23 +30,25 @@ function useAgenda(from: string, to: string, nets?: Set<string>) {
 export function Agenda() {
   const mobile = useMobile()
   const mode = useView((s) => s.mode)
-  const [nets, setNets] = useState(() => new Set(NETS))
+  const config = useStore((s) => s.config)
+  const shown = ids.filter((n) => config?.nets[n]?.on ?? true)
+  const [nets, setNets] = useState(() => new Set(ids))
   const toggle = (n: string) => {
     const next = new Set(nets)
-    if (next.has(n) && next.size > 1) next.delete(n)
+    if (next.has(n) && shown.some((x) => x !== n && next.has(x))) next.delete(n)
     else next.add(n)
     setNets(next)
   }
   if (mobile) return <MobileAgenda />
   return (
     <Desk cols="grid-cols-[1fr_380px]">
-      <section className="card flex min-h-0 flex-col px-8 pt-8 pb-6">{mode === 'semana' ? <Week nets={nets} /> : <Month nets={nets} toggle={toggle} />}</section>
+      <section className="card flex min-h-0 flex-col px-8 pt-8 pb-6">{mode === 'semana' ? <Week nets={nets} /> : <Month nets={nets} shown={shown} toggle={toggle} />}</section>
       <Side />
     </Desk>
   )
 }
 
-function Month({ nets, toggle }: { nets: Set<string>; toggle: (n: string) => void }) {
+function Month({ nets, shown, toggle }: { nets: Set<string>; shown: string[]; toggle: (n: string) => void }) {
   const [, go] = useLocation()
   const { anchor, mode, set } = useView()
   const first = `${anchor.slice(0, 7)}-01`
@@ -84,7 +84,7 @@ function Month({ nets, toggle }: { nets: Set<string>; toggle: (n: string) => voi
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {NETS.map((n) => (
+          {shown.map((n) => (
             <button key={n} className={`chip ${nets.has(n) ? '' : 'off'}`} onClick={() => toggle(n)}>
               <span className="size-[7px] rounded-full" style={{ background: color(n) }} />
               {find(n)?.name}

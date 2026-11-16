@@ -1,4 +1,5 @@
 import { kind } from '@social-grid/core/media.ts'
+import { shape } from '@social-grid/core/network/index.ts'
 import type { Post } from '@social-grid/core/post/post.ts'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
@@ -22,12 +23,9 @@ function Slide({ post, name }: { post: Post; name: string }) {
   )
 }
 
-const frame = (p: Post) =>
-  p.network === 'instagram' && (p.format === 'story' || p.format === 'reels')
-    ? 'aspect-[9/16] max-h-[68dvh]'
-    : p.network === 'instagram'
-      ? 'aspect-[4/5]'
-      : 'aspect-square'
+const FRAMES = { vertical: 'aspect-[9/16] max-h-[68dvh]', paisagem: 'aspect-video', quadrado: 'aspect-square', retrato: 'aspect-[4/5]' }
+
+const frame = (p: Post) => (p.network === 'linkedin' && p.format === 'post' ? FRAMES.quadrado : FRAMES[shape(p.network, p.format)])
 
 export function Slides({ post }: { post: Post }) {
   const box = useRef<HTMLDivElement>(null)

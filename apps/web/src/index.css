@@ -25,6 +25,10 @@
   --color-instagram-soft: #3a1f30;
   --color-linkedin: #5cb4ff;
   --color-linkedin-soft: #18293b;
+  --color-tiktok: #4de8e0;
+  --color-tiktok-soft: #173634;
+  --color-youtube: #ff9d4d;
+  --color-youtube-soft: #3a2616;
   --color-ai: #a594f9;
   --color-draft: #e4f24a;
   --color-ready: #3ee07a;
@@ -419,6 +423,12 @@
   }
   .sc.linkedin {
     background: var(--color-linkedin);
+  }
+  .sc.tiktok {
+    background: var(--color-tiktok);
+  }
+  .sc.youtube {
+    background: var(--color-youtube);
   }
   .field {
     width: 100%;
